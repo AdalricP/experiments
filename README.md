@@ -2,12 +2,6 @@
 
 ## Recent
 
-### 2026-09-12 — Hill climb: open-loop vs closed-loop control
-
-This experiment puts an open-loop car with fixed throttle alongside a closed-loop car that uses PI feedback to meet its speed target on a `_ /` road. On flat ground both cars move steadily, but as the hill gets steeper the open-loop car slows while the feedback controller raises its input to hold the selected speed. It makes the effect of changing throttle, target speed, terrain mode, and hill steepness visible side by side.
-
-![Hill-climb dashboard](assets/hill-climb-dashboard.png)
-
 ### 2026-09-12 — Pole balancing
 
 This experiment tests how a closed-loop control system performs against learning-based models on the same cart-pole task, using random actions, classical controllers, tabular RL, neural RL, and an RL-to-LQR safety hybrid. PID and LQR reliably hold the pole for the 1,000-step limit while the learning agents start untrained and expose their episode-length and loss curves as they improve. The dashboard makes the trade-off between a known control model and learning from interaction easy to watch.
