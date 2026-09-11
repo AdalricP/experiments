@@ -1,0 +1,36 @@
+// Season 1 finalist — forged by a Claude subagent over 10 generations.
+// See fights/history.md for the full tournament story.
+window.WIZARDS.push({
+  "name": "Pyrrhax Basaltborn",
+  "epithet": "the Obsidian Verdict of the Deep Loam",
+  "color": "#c67a1d",
+  "color2": "#ffd23d",
+  "element": "earth",
+  "spells": [
+    {
+      "name": "Cairnfield Snare",
+      "desc": "An r50 earth rune planted 18px toward the enemy's approach line \u2014 their blink-to-contact lands between us, always inside its 56px trigger. 32.5 into water per landing, plus a shield crust.",
+      "element": "earth",
+      "incantation": "/* CAIRNFIELD SNARE. The loam ahead of the caster is salted with patient stone, set a stride toward the tide's own road; whatever dares land there finds the ground already owed a debt, and the wide cairn collects on contact. A crust of amber wards the keeper while the field waits. */ctx.rune(me.x+Math.cos(ctx.aim)*18,me.y+Math.sin(ctx.aim)*18,25,50,.4);ctx.shield(ctx.budget()/1.5)"
+    },
+    {
+      "name": "Gravebloom Verdict",
+      "desc": "The counter: fired point-blank, into their post-Rend mana poverty once their pre-shield has decayed to flesh, or as a finisher. Sacrifice 16 only vs healthy targets, adaptive blink, drag, chained novas plus piercing strike.",
+      "element": "neutral",
+      "incantation": "/* GRAVEBLOOM VERDICT. The loam opens its veins only when the tide stands tall; against the broken it simply reaches, closes a basalt fist around the water, and pulls. Stone petals bloom twice. */if(me.hp>30&&enemy.hp+enemy.shield>36)ctx.sacrifice(16);var b=Math.max(0,Math.min(ctx.dist-42,100));ctx.blink(Math.cos(ctx.aim)*b,Math.sin(ctx.aim)*b);ctx.push(-60);while(ctx.budget()>=42)ctx.nova(30,40);ctx.nova(ctx.budget()/1.45,40);if(me.stamina>50)ctx.strike(16);"
+    },
+    {
+      "name": "Bulwark of the Molten Vein",
+      "desc": "The wall: at close range shove them 55px out of Rend rhythm with a 40% slow plus shield; at range raise shield and a mirror ward that returns any bolt they dare throw. Timed by the policy to their visible Rend funding.",
+      "element": "earth",
+      "incantation": "/* BULWARK. The vein of molten gold under the field rises: either the earth shrugs the assassin away and grips their ankles in cooling slag, or it polishes into a mirror that returns every borrowed wave with interest. */if(ctx.dist<85){ctx.push(55);ctx.slow(40,2);ctx.shield(ctx.budget()/1.5)}else{ctx.reflect(1.3);ctx.shield(ctx.budget()/1.5)}"
+    },
+    {
+      "name": "Blightloam Tithe",
+      "desc": "Curse from second one \u2014 6dps/4s earth DoT applied at any range, immune to shield timing, with a self-mend rider. In any standoff their leech finds nothing while this grinds them down.",
+      "element": "earth",
+      "incantation": "/* BLIGHTLOAM TITHE. Spores of old stone settle in the rival's lungs no matter how far or fast they flee; the loam collects its rent and pays its keeper in knitted flesh. There is no sidestep wide enough to dodge what is already inside you. Every breath is ground a little finer. */ctx.curse(6,4);ctx.heal(ctx.budget()/1.9)"
+    }
+  ],
+  "policy": "var K=me.cooldowns,X=enemy.x-me.x,Y=enemy.y-me.y,d=Math.hypot(X,Y)||1,M=memory,h=api.threats[0],T=api.time;var G=T-(M.g||-9)>.36;var c=!G?-1:K[1]<=0&&me.mana>=32&&d<204&&(d<105||enemy.mana<24||enemy.hp<48)?1:d<70&&K[2]<=0&&me.mana>=20&&(K[1]>0||me.mana<32)?2:K[2]<=0&&d>85&&enemy.mana>26&&me.shield<12&&me.mana>=20?2:K[0]<=0&&me.mana>=19&&(T<1.9||d>110&&me.mana>50&&T-(M.r||-9)>6)?0:K[3]<=0&&d>50&&(me.mana>38||me.mana>=16&&(T<3.5||enemy.hp<42))?3:-1;if(c>-1){api.cast(c);M.g=T;if(c<1){M.r=T;M.rx=me.x;M.ry=me.y}}var A=T-(M.r||-99)<7.5&&d<200,ax=(M.rx||0)-me.x,ay=(M.ry||0)-me.y,ar=Math.hypot(ax,ay)||1,q=A&&ar>12;var mx=q?ax/ar:(!A&&d<120?-X:-Y)/d,my=q?ay/ar:(!A&&d<120?-Y:X)/d;if(h&&h.damage>9&&h.dist<90&&d>60&&(!A||d>110)){var s=((me.x-h.x)*-h.dy+(me.y-h.y)*h.dx)<0?-1:1;mx=-h.dy*s;my=h.dx*s}api.move(mx+(240-me.x)/240,my+(146-me.y)/240);"
+});

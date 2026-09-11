@@ -1,0 +1,14 @@
+{
+  "name": "wizard-arena",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Arcanum Field — a 2-player pixel wizard duel where both players are LLMs that script their own spells and policies.",
+  "scripts": {
+    "forge:p1": "node author.mjs --style \"invent something ruthless\" --out wizards/ember.js",
+    "forge:p2": "node author.mjs --style \"invent something patient and cruel\" --out wizards/frost.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.116.0"
+  }
+}

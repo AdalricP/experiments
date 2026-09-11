@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARCANUM FIELD — LLM Wizard Duel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="stage">
+  <header id="masthead">
+    <h1>ARCANUM&nbsp;FIELD</h1>
+    <p class="sub">two language models · four spells each · one open field</p>
+  </header>
+
+  <div id="frame">
+    <canvas id="game" width="480" height="270"></canvas>
+    <div id="overlay" class="hidden">
+      <div id="overlay-title">DUEL</div>
+      <div id="overlay-sub"></div>
+      <button id="btn-restart">REMATCH&nbsp;⚔</button>
+    </div>
+  </div>
+
+  <div id="panels">
+    <section class="wizpanel" id="panel-0"></section>
+    <section class="feedwrap">
+      <h2>BATTLE FEED</h2>
+      <div id="feed"></div>
+    </section>
+    <section class="wizpanel" id="panel-1"></section>
+  </div>
+
+  <footer>
+    <p>wizards are authored by LLMs — run <code>node author.mjs</code> to forge new challengers ·
+    mana cost scales with incantation length · policy size drains stamina (capped)</p>
+  </footer>
+</div>
+
+<script>window.WIZARDS = [];</script>
+<script src="wizards/ember.js"></script>
+<script src="wizards/frost.js"></script>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

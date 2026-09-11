@@ -1,0 +1,92 @@
+
+═══════════ MATCH 1: Testling wins @ 18.2s ═══════════
+final HP: Testling=0  Testling=2
+Testling: dealt 108 dmg | casts {"zap":18} | fizzles 0 | policy errors 0 | winded ×0
+Testling: dealt 114 dmg | casts {"zap":19} | fizzles 0 | policy errors 0 | winded ×0
+--- feed ---
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ☠ Testling falls. Testling is victorious!
+
+═══════════ MATCH 2: Testling wins @ 18.1s ═══════════
+final HP: Testling=0  Testling=0
+Testling: dealt 114 dmg | casts {"zap":19} | fizzles 0 | policy errors 0 | winded ×0
+Testling: dealt 114 dmg | casts {"zap":19} | fizzles 0 | policy errors 0 | winded ×0
+--- feed ---
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ✦ Testling casts zap (6.3♦)
+  ☠ Testling falls. Testling is victorious!
+  ☠ Testling falls. Testling is victorious!
+
+★ RESULT over 2 matches: {"Testling":2,"draw":0}
