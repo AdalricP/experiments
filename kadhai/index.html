@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><meta name="theme-color" content="#dce9ee"/><title>Kadhai · floating, evolving cells</title></head>
+<body>
+<main id="app">
+  <div id="habitat" aria-label="Interactive 2D floating-cell habitat"></div>
+  <header><a class="wordmark" href="./">kadhai<span>◌</span></a><p>A little experiment in becoming.</p><span class="live"><i></i><span id="state">Growing</span></span></header>
+  <section class="intro"><h1>Life takes shape.</h1><p>Floating cells. No gravity.<br>Small mutations, unfamiliar shapes.</p></section>
+  <aside class="panel">
+    <div class="panel-title"><h2>The habitat</h2><span>12 cells</span></div>
+    <div class="generation"><span>Generation</span><strong id="generation">01</strong></div>
+    <div class="progress"><div id="progress"></div></div>
+    <div class="between"><span id="age">Growing up</span><span id="remaining">30s</span></div>
+    <div class="stats"><div><span>Nutrients eaten</span><b id="best">0</b></div><div><span>Body variety</span><b id="variety">—</b></div></div>
+    <label for="mutation">Shape mutation <output id="mutation-value">35%</output></label>
+    <input id="mutation" type="range" min="5" max="90" value="35"/>
+    <p class="help">Children inherit a survivor’s body, with changes to length, width and lobes.</p>
+    <label for="speed">Time speed <output id="speed-value">1×</output></label>
+    <input id="speed" type="range" min="1" max="4" step="1" value="1"/>
+    <div class="actions"><button id="pause">Pause</button><button id="next" class="primary">Next generation ↗</button></div>
+    <button id="reset" class="text-button">↻ Start a new lineage</button>
+    <details><summary>What’s evolving?</summary><p>Each cell is an Algovivo soft body, floating in a gentle current with gravity switched off. Cells grow and absorb the small nutrient particles they touch. Every 30 simulated seconds, the three cells with the most food minus a body-size cost produce the next generation.</p><p>This is a rough selection experiment, not a model of biological evolution. Shapes inherit length, width, lobe count and lobe depth. The best genome is preserved; the other offspring mutate. This bounded shape family cannot invent arbitrary anatomy.</p><p>Powered by <a href="https://github.com/juniorrojas/algovivo" target="_blank" rel="noreferrer">Algovivo</a>. Algovivo handles elasticity and muscle contraction. Drift, nutrient absorption and selection are simple rules added for this experiment; there is no fluid-dynamics solver.</p></details>
+  </aside>
+  <section class="specimen" aria-live="polite"><span class="specimen-dot"></span><div><h2 id="specimen-name">Cell 01</h2><p id="specimen-info">Click a cell to meet it</p></div><span id="specimen-shape">Juvenile</span></section>
+  <footer><span>Drag to pan <em>/</em> Scroll to zoom <em>/</em> Click to inspect</span><button id="view">Reset view</button><button id="wire" aria-pressed="false">Show structure</button></footer>
+  <div id="notice" role="status"></div>
+</main>
+<script type="module" src="/src/main.js"></script>
+</body></html>

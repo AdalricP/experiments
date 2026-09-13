@@ -1,0 +1,16 @@
+{
+  "name": "kadhai",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "node --test test/*.test.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1",
+    "vite": "^7.3.6"
+  }
+}

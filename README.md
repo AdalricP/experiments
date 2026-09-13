@@ -2,6 +2,12 @@
 
 ## Recent
 
+### 2026-09-13 — Kadhai: floating soft cells
+
+This experiment uses Algovivo to float twelve soft 2D cells without gravity, grow their bodies, and pass mutated lengths, widths, and lobes from nutrient-gathering survivors to the next generation. The running browser capture shows mature cells with distinct outlines and 44 absorbed nutrients, while seeded solver checks completed three selection rounds without non-finite positions. Next, compare evolving populations with frozen-genome controls under identical nutrient fields to see whether shape selection helps rather than just changing appearances.
+
+![Kadhai floating cells](assets/kadhai-floating-cells.png)
+
 ### 2026-09-12 — Pole balancing
 
 This experiment tests how a closed-loop control system performs against learning-based models on the same cart-pole task, using random actions, classical controllers, tabular RL, neural RL, and an RL-to-LQR safety hybrid. PID and LQR reliably hold the pole for the 1,000-step limit while the learning agents start untrained and expose their episode-length and loss curves as they improve. The dashboard makes the trade-off between a known control model and learning from interaction easy to watch.
