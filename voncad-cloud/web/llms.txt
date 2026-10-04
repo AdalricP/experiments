@@ -1,0 +1,91 @@
+# Voncad Cloud
+
+> A hosted build123d / OpenCascade CAD kernel behind a REST API and an MCP server. Send a build123d Python script, get back a real B-rep with stable face/edge ids (p0/f3, p0/e7), headless renders you can look at, analysis, build-step replay and exports (STEP, STL, GLB, 3MF, BREP, SVG, DXF). Units are millimetres.
+
+Base URL: the origin serving this file (e.g. https://<host>). MCP endpoint: https://<host>/mcp (streamable HTTP).
+Auth: `Authorization: Bearer vc_...` (optional; without it you get a small anonymous per-IP quota). Get a key: `POST /v1/keys {"email": "..."}` → `{"api_key", "plan"}`.
+
+## How to work (recommended loop)
+
+1. Write a build123d script. End with `result = <shape or BuildPart.part>`, or call `show(a, b, ...)` for an assembly (one part per argument). Put tunable numbers in a top-level `params = {"width": 40, ...}` dict literal.
+2. `POST /v1/build {"script", "params"?}` (MCP: `build_model`). Stateless. Read `ok`, `error`, `logs`, `summary` (volume, bbox, faces, edges per part).
+3. Look at it: `GET /v1/versions/{vid}/render-grid.png` (MCP: `render_grid`) or `render.png?view=iso&highlight=p0/f3`. Do not claim a part is correct without looking.
+4. Save: `POST /v1/documents {"name", "script", "params"?}` (MCP: `create_document`) → `version.id`. Iterate with `POST /v1/documents/{id}/versions {"script"?, "params"?, "parent"?, "message"?}` (MCP: `update_document`).
+5. Before naming a face or edge, call `GET /v1/versions/{vid}/topology` (MCP: `get_topology`). Ids follow build123d order: `p0/f3` == `part.faces()[3]` of part 0.
+6. Check and ship: `POST /v1/versions/{vid}/check {"process": "fdm"|"cnc"|"sheet"}`, then `GET /v1/versions/{vid}/export/step`.
+7. Explain to the human: link `GET /v1/versions/{vid}/report` (HTML design report), `/explainer.gif`, or summarise `GET /v1/versions/{vid}/steps`.
+
+## Script rules
+
+- No file/OS/network access (export_*, import_*, open, np.save/load are rejected; the server exports for you).
+- Allowed imports: build123d, numpy, math, cmath, random, itertools, functools, operator, typing, dataclasses, enum, copy, collections, statistics, fractions, decimal, string, re.
+- Not allowed: file or network access, open, exec, eval, compile, getattr/setattr/delattr, globals/locals/vars, dunder attributes or dunder strings, relative imports.
+- print() output is returned in `logs`. Default time limit 60 s per job, with a memory cap.
+- If neither `result` nor `show()` is used, the last build123d shape or BuildPart in scope is taken.
+
+Minimal script:
+
+    from build123d import *
+    params = {"w": 60, "h": 30, "t": 6, "hole": 6.5}
+    with BuildPart() as plate:
+        Box(params["w"], params["h"], params["t"])
+        with GridLocations(params["w"] - 15, params["h"] - 12, 2, 2):
+            Hole(params["hole"] / 2)
+        fillet(plate.edges().filter_by(Axis.Z), 3)
+    result = plate.part
+
+## REST endpoints
+
+- POST /v1/keys {email} → {api_key, plan}
+- GET  /v1/me → {plan, usage:{calls_today, calls_month, compute_ms_month}, limits}
+- POST /v1/build {script, params?, quality?: draft|normal|fine} → {ok, error?, logs, summary, scene, links:{scene, render, render_grid, report, explainer, step, stl, glb, viewer}}
+- POST /v1/documents {name, script?, features?, params?, public?} → {document, version}
+- GET  /v1/documents → {documents}; GET /v1/documents/{id} → {document, versions}
+- GET  /v1/versions/{vid}/interference → {clashes:[{a,b,volume_mm3,center}], ok}
+- GET  /v1/versions/{vid}/bom?density= → {items:[{item,name,quantity,ids,size_mm,volume_mm3}]}
+- POST /v1/agent {prompt, script?, document_id?} → {ok, version, rounds} (text-to-CAD; needs a key and server-side ANTHROPIC_API_KEY)
+- POST /v1/documents/{id}/versions {script?, params?, features?, parent?, message?} → {version}
+- GET  /v1/versions/{vid} → {id, document_id, parent, script, params, param_schema, status, error, logs, summary, created}
+- GET  /v1/versions/{vid}/scene → scene JSON (format "voncad-scene" v1; base64 float32 positions/normals, uint32 indices; faces with start/count triangle ranges)
+- GET  /v1/versions/{vid}/topology → face/edge descriptors (id, type, area, center, normal | radius, axis; edges: id, type, length)
+- GET  /v1/versions/{vid}/steps → [{index, op, description, volume, faces, scene_url}]
+- GET  /v1/versions/{vid}/render.png?view=iso|front|top|right|back|left|bottom&w=&h=&highlight=p0/f3,p0/e2
+- GET  /v1/versions/{vid}/render-grid.png → 2x2 views
+- GET  /v1/versions/{vid}/explainer.gif → captioned build animation
+- GET  /v1/versions/{vid}/report → HTML design report
+- GET  /v1/versions/{vid}/export/{fmt}, fmt ∈ step|stl|glb|3mf|brep|svg|dxf
+- POST /v1/versions/{vid}/measure {a:"p0/f1", b:"p0/f7"} → {distance, angle_deg?, a, b}
+- POST /v1/versions/{vid}/section {origin:[x,y,z], normal:[x,y,z]} → {area, svg}
+- GET  /v1/versions/{vid}/mass?density=7.85 (g/cm³)
+- POST /v1/versions/{vid}/check {process:"fdm"|"cnc"|"sheet"} → DFM report
+- GET  /v1/diff?a={vid}&b={vid} → {volume_added, volume_removed, faces_added, faces_removed}
+- POST /v1/import multipart `file` (step/stp/brep/stl) → {document, version}
+- GET  /v1/examples → [{id, name, script}]  (bracket, flange, gear, enclosure, leg)
+
+A failed build is HTTP 200 with ok=false and an `error` message; fix the script and retry. HTTP 429 means quota exceeded.
+
+Interactive API explorer (OpenAPI): /api/docs ; schema: /openapi.json
+
+## MCP tools
+
+build_model, create_document, update_document, get_topology, render_view, render_grid, measure, section, mass_properties, check_manufacturability, export_model, diff_versions, list_examples, get_build_steps.
+
+Setup:
+- Claude Code: `claude mcp add --transport http voncad https://<host>/mcp --header "Authorization: Bearer vc_..."`
+- Claude Desktop / Cursor: {"mcpServers":{"voncad":{"url":"https://<host>/mcp","headers":{"Authorization":"Bearer vc_..."}}}}
+
+## Limits and pricing
+
+- Free: 2,000 builds/month, all exports, MCP, no card.
+- Pro: $12/month, 100,000 builds/month, 3-minute builds, priority workers.
+- Scale: $0.0004 per build-second. Self-hosting is free (open source).
+
+## Self-host
+
+- `docker run -p 8000:8000 voncad-cloud` → http://localhost:8000 (site, /v1, /mcp)
+- `./deploy/public.sh` → public https URL via a Cloudflare quick tunnel
+
+## Docs
+
+- [Docs](docs.html): quickstart, concepts, full reference
+- [Studio](studio.html): browser editor + viewer

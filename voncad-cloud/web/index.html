@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Voncad Cloud — The CAD kernel for agents</title>
+  <meta name="description" content="build123d + OpenCascade as a REST API and MCP server. Stable face ids, renders agents can see, build-step replay. Every call is a fraction of a cent.">
+  <meta name="theme-color" content="#fcfcfb">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Geist+Mono:wght@400;500&family=Michroma&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/site.css">
+  <!-- Background material: a first-time visitor always gets clay plaster. Returning
+       visitors roll (clay plaster 90%, the rare ones 5% each). Only the chosen
+       material's maps are preloaded so it appears on first view. -->
+  <script>
+    (() => {
+      const pool = [
+        ["Clay plaster", "clay_plaster", 90],
+        ["Brushed concrete", "brushed_concrete", 5],
+        ["Aggregate", "concrete_floor_01", 5],
+      ];
+      let returning = false;
+      try {
+        returning = localStorage.getItem("voncad-visited") === "1";
+        localStorage.setItem("voncad-visited", "1");
+      } catch (e) {}
+      let pick = pool[0];
+      if (returning) {
+        let r = Math.random() * 100;
+        for (const p of pool) { if ((r -= p[2]) < 0) { pick = p; break; } }
+      }
+      window.VONCAD_MATERIAL = pick[0];
+      for (const f of ["normal", "orm"]) {
+        const l = document.createElement("link");
+        l.rel = "preload"; l.as = "image"; l.fetchPriority = "high";
+        l.href = `assets/textures/pbr/${pick[1]}/${f}.jpg`;
+        document.head.appendChild(l);
+      }
+    })();
+  </script>
+</head>
+<body>
+  <canvas id="material" aria-hidden="true"></canvas>
+  <canvas id="stars" aria-hidden="true"></canvas>
+
+  <header class="top">
+    <a class="wordmark" href="#top" aria-label="Voncad">VONCAD</a>
+  </header>
+
+  <nav class="dock" aria-label="Quick links">
+    <a href="studio.html" aria-label="Studio" data-tip="Studio">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+    </a>
+    <a href="docs.html" aria-label="Docs" data-tip="Docs">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg>
+    </a>
+    <a href="docs.html#reference" aria-label="API reference" data-tip="API">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></svg>
+    </a>
+    <!-- TODO: real contact address -->
+    <a href="mailto:" aria-label="Contact" data-tip="Contact">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+    </a>
+  </nav>
+
+  <main id="top">
+    <!-- 1 · Hero -->
+    <section class="hero">
+      <div class="wrap">
+        <h1 class="product-name">Voncad Cloud</h1>
+        <p class="tagline">The CAD kernel for agents.</p>
+        <p class="sub">build123d + OpenCascade as an API and MCP server.<br> Every call is a fraction of a cent.</p>
+
+        <div class="cta-row">
+          <a class="btn btn-dark" href="studio.html">Open Studio</a>
+          <a class="btn" href="#key">Get an API key</a>
+        </div>
+
+        <div class="viewer-frame" id="hero-viewer">
+          <span class="frame-tag tl"><span class="dot"></span>Live · Quadruped, 23 parts</span>
+          <span class="frame-tag br">p0/f3</span>
+          <div class="placeholder">
+            <!-- Line drawing of the leg: hip, thigh, knee, shin, foot -->
+            <svg aria-hidden="true" viewBox="0 0 200 240" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round">
+              <circle class="draw" pathLength="1" cx="70" cy="40" r="26"/>
+              <path class="draw" pathLength="1" d="M58 62 L104 124 L124 112 L82 52"/>
+              <circle class="draw" pathLength="1" cx="116" cy="128" r="20"/>
+              <path class="draw" pathLength="1" d="M108 146 L82 206 L98 212 L126 148"/>
+              <circle class="draw" pathLength="1" cx="88" cy="214" r="10"/>
+            </svg>
+            <span class="label">Loading the live viewer</span>
+          </div>
+          <iframe title="Live 3D viewer: 23-part quadruped robot" loading="lazy" data-src="view.html?sample=quadruped&amp;embed=1"></iframe>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 2 · Stats -->
+    <div class="wrap">
+      <div class="stats">
+        <div class="stat">
+          <div class="value">~0.2<span class="unit">s</span></div>
+          <span class="label">Median build<span class="wide-only">, simple parts</span></span>
+        </div>
+        <div class="stat">
+          <div class="value">$0</div>
+          <span class="label">To start<span class="wide-only"> · no card</span></span>
+        </div>
+        <div class="stat">
+          <div class="value">1000<span class="unit">×</span></div>
+          <span class="label"><a href="#pricing">Cheaper per call<span class="wide-only"><br>than the Onshape API</span>*</a></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 · Built for agents -->
+    <section class="block" id="features">
+      <div class="wrap">
+        <div class="block-head">
+          <span class="label">Built for agents</span>
+          <h2>Agents write the part. You see what they did.</h2>
+          <p>A real B-rep kernel with an interface designed for models, and outputs designed for the humans supervising them.</p>
+        </div>
+
+        <div class="features">
+          <div class="feature">
+            <span class="num">01</span>
+            <h3>Code is the model</h3>
+            <p>Every part is a build123d program. Declare <code>params = {...}</code> and each API call can override them. Configurations for free.</p>
+            <div class="chips"><span class="chip">build123d</span><span class="chip">params</span></div>
+          </div>
+          <div class="feature">
+            <span class="num">02</span>
+            <h3>Stable references</h3>
+            <p>Faces and edges get ids like <code>p0/f3</code>. The same id in the viewer, the API and MCP. Click a face, paste it into a prompt.</p>
+            <div class="chips"><span class="chip">p0/f3</span><span class="chip">p1/e7</span></div>
+          </div>
+          <div class="feature">
+            <span class="num">03</span>
+            <h3>Agents can see</h3>
+            <p>Headless renders with face ids drawn on. A four-view grid in one image. The model checks its own work before it tells you it's done.</p>
+            <div class="chips"><span class="chip">render.png</span><span class="chip">render-grid.png</span></div>
+          </div>
+          <div class="feature">
+            <span class="num">04</span>
+            <h3>Oversight built in</h3>
+            <p>Replay the build step by step, each step in plain English. Auto-generated design reports and explainer GIFs. Understand the output at a glance.</p>
+            <div class="chips"><span class="chip">steps</span><span class="chip">report</span><span class="chip">explainer.gif</span></div>
+          </div>
+          <div class="feature">
+            <span class="num">05</span>
+            <h3>Real B-rep</h3>
+            <p>OpenCascade solids, not meshes. Export STEP for Fusion or SolidWorks. Mass properties, sections, measurements, DFM checks and geometric diffs.</p>
+            <div class="chips"><span class="chip">STEP</span><span class="chip">STL</span><span class="chip">GLB</span><span class="chip">3MF</span><span class="chip">BREP</span><span class="chip">SVG</span><span class="chip">DXF</span></div>
+          </div>
+          <div class="feature">
+            <span class="num">06</span>
+            <h3>Versioned documents</h3>
+            <p>Every build is a version with a parent. Branch from any point, diff any two. Nothing an agent does is lost.</p>
+            <div class="chips"><span class="chip">versions</span><span class="chip">diff</span></div>
+          </div>
+        </div>
+
+        <!-- Build-step replay demo (real numbers from the flange example) -->
+        <div class="replay-head">
+          <div><span class="label">Build-step replay</span><h3>Read how the part was built.</h3></div>
+          <p>Every operation, in plain English, with the volume and face count after it. Click a step.</p>
+        </div>
+        <div class="replay" id="replay">
+          <ol class="replay-steps">
+            <li data-line="0">Add a cylinder, Ø90 × 8 mm, on the XY plane.<span class="meta">50,894 mm³ · 3 faces</span></li>
+            <li data-line="1">Add a hub, Ø46 × 28 mm, on the same axis.<span class="meta">84,132 mm³ · 5 faces</span></li>
+            <li data-line="2">Fillet the hub root, radius 4 mm.<span class="meta">84,647 mm³ · 6 faces</span></li>
+            <li data-line="3">Cut a Ø22 mm bore through the centre.<span class="meta">74,004 mm³ · 7 faces</span></li>
+            <li data-line="4">Cut 6 counterbored M6 holes on a Ø72 mm circle.<span class="meta">71,267 mm³ · 25 faces</span></li>
+            <li data-line="5">Chamfer the top edges, 1 mm.<span class="meta">71,160 mm³ · 27 faces</span></li>
+          </ol>
+          <div class="code replay-code">
+            <div class="code-bar"><span class="title">flange.py · build-step replay</span></div>
+<pre><code><span class="ln" data-line="0">Cylinder(<span class="n">45</span>, <span class="n">8</span>, align=BASE)</span><span class="ln" data-line="1">Cylinder(<span class="n">23</span>, <span class="n">28</span>, align=BASE)</span><span class="ln" data-line="2">fillet(hub_root, <span class="n">4</span>)</span><span class="ln" data-line="3">Hole(<span class="n">11</span>)</span><span class="ln" data-line="4"><span class="k">with</span> PolarLocations(<span class="n">36</span>, <span class="n">6</span>):
+    CounterBoreHole(<span class="n">3.3</span>, <span class="n">5.5</span>, <span class="n">3</span>)</span><span class="ln" data-line="5">chamfer(top_edges, <span class="n">1</span>)</span></code></pre>
+            <div class="endpoint-hint"><b>GET</b> /v1/versions/{vid}/steps · MCP <b>get_build_steps</b></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 · MCP -->
+    <section class="block" id="mcp">
+      <div class="wrap">
+        <div class="block-head">
+          <span class="label">MCP</span>
+          <h2>One line in Claude Code.</h2>
+          <p>Fourteen tools: build, render, measure, section, check, export, diff. Renders come back as images, so the model sees the part.</p>
+        </div>
+        <div class="mcp-grid">
+          <div class="code">
+            <div class="code-bar"><span class="title">Claude Code</span><button class="copy" type="button" data-copy aria-label="Copy command"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy-label">Copy</span></button></div>
+<pre><code><span class="c"># drop --header to use the anonymous playground quota</span>
+claude mcp add --transport http voncad \
+  <span class="host-mcp">https://api.voncad.dev/mcp</span> \
+  --header <span class="s">"Authorization: Bearer <span class="api-key">vc_...</span>"</span>
+
+<span class="c"># then ask: "build a 60 mm bracket with four M6 holes,
+#  render it, and export STEP"</span></code></pre>
+          </div>
+          <div class="code">
+            <div class="code-bar"><span class="title">Claude Desktop · Cursor</span><button class="copy" type="button" data-copy aria-label="Copy JSON config"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy-label">Copy</span></button></div>
+<pre><code>{
+  <span class="k">"mcpServers"</span>: {
+    <span class="k">"voncad"</span>: {
+      <span class="k">"url"</span>: <span class="s">"<span class="host-mcp">https://api.voncad.dev/mcp</span>"</span>,
+      <span class="k">"headers"</span>: { <span class="k">"Authorization"</span>: <span class="s">"Bearer <span class="api-key">vc_...</span>"</span> }
+    }
+  }
+}</code></pre>
+          </div>
+          <p class="note">Anonymous calls work on the playground quota. Add a key for your own limits. Full tool list in the <a href="docs.html#mcp">docs</a>.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 · Code -->
+    <section class="block" id="api">
+      <div class="wrap">
+        <div class="block-head">
+          <span class="label">REST API</span>
+          <h2>Script in. STEP out.</h2>
+          <p>Build a part, save it as a version, download the STEP. Three calls.</p>
+        </div>
+
+        <div class="code" data-tabs>
+          <div class="code-bar">
+            <div class="tabs" role="tablist" aria-label="Language">
+              <button class="tab" role="tab" type="button" aria-selected="true" aria-controls="ex-curl" id="t-curl">curl</button>
+              <button class="tab" role="tab" type="button" aria-selected="false" aria-controls="ex-py" id="t-py" tabindex="-1">Python</button>
+              <button class="tab" role="tab" type="button" aria-selected="false" aria-controls="ex-js" id="t-js" tabindex="-1">JavaScript</button>
+            </div>
+            <button class="copy" type="button" data-copy aria-label="Copy code sample"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy-label">Copy</span></button>
+          </div>
+<pre role="tabpanel" id="ex-curl" aria-labelledby="t-curl"><code><span class="c"># 1 · build (stateless): summary + scene, nothing stored</span>
+curl -s <span class="host">https://api.voncad.dev</span>/v1/build \
+  -H <span class="s">"Authorization: Bearer $VONCAD_KEY"</span> \
+  -H <span class="s">"Content-Type: application/json"</span> \
+  -d <span class="s">'{"script": "from build123d import *\nparams = {\"w\": 40}\nresult = Box(params[\"w\"], 30, 6)", "params": {"w": 60}}'</span>
+
+<span class="c"># 2 · save it as a document; the response holds version.id</span>
+curl -s <span class="host">https://api.voncad.dev</span>/v1/documents \
+  -H <span class="s">"Authorization: Bearer $VONCAD_KEY"</span> \
+  -H <span class="s">"Content-Type: application/json"</span> \
+  -d <span class="s">'{"name": "plate", "script": "from build123d import *\nresult = Box(60, 30, 6)"}'</span>
+
+<span class="c"># 3 · export</span>
+curl -s <span class="host">https://api.voncad.dev</span>/v1/versions/$VERSION_ID/export/step \
+  -H <span class="s">"Authorization: Bearer $VONCAD_KEY"</span> -o plate.step</code></pre>
+<pre role="tabpanel" id="ex-py" aria-labelledby="t-py" hidden><code><span class="k">import</span> os, requests
+
+API = <span class="s">"<span class="host">https://api.voncad.dev</span>"</span>
+H = {<span class="s">"Authorization"</span>: <span class="s">f"Bearer {os.environ['VONCAD_KEY']}"</span>}
+
+script = <span class="s">"""
+from build123d import *
+params = {"w": 40, "h": 30, "t": 6}
+result = Box(params["w"], params["h"], params["t"])
+"""</span>
+
+<span class="c"># 1 · build (stateless)</span>
+r = requests.post(<span class="s">f"{API}/v1/build"</span>, headers=H,
+                  json={<span class="s">"script"</span>: script, <span class="s">"params"</span>: {<span class="s">"w"</span>: <span class="n">60</span>}}).json()
+<span class="k">print</span>(r[<span class="s">"ok"</span>], r[<span class="s">"summary"</span>][<span class="s">"volume"</span>])
+
+<span class="c"># 2 · save as a document → version</span>
+doc = requests.post(<span class="s">f"{API}/v1/documents"</span>, headers=H,
+                    json={<span class="s">"name"</span>: <span class="s">"plate"</span>, <span class="s">"script"</span>: script}).json()
+vid = doc[<span class="s">"version"</span>][<span class="s">"id"</span>]
+
+<span class="c"># 3 · export STEP</span>
+step = requests.get(<span class="s">f"{API}/v1/versions/{vid}/export/step"</span>, headers=H)
+open(<span class="s">"plate.step"</span>, <span class="s">"wb"</span>).write(step.content)</code></pre>
+<pre role="tabpanel" id="ex-js" aria-labelledby="t-js" hidden><code><span class="k">const</span> API = <span class="s">"<span class="host">https://api.voncad.dev</span>"</span>;
+<span class="k">const</span> H = { Authorization: <span class="s">`Bearer ${process.env.VONCAD_KEY}`</span>, <span class="s">"Content-Type"</span>: <span class="s">"application/json"</span> };
+
+<span class="k">const</span> script = <span class="s">`from build123d import *
+params = {"w": 40, "h": 30, "t": 6}
+result = Box(params["w"], params["h"], params["t"])`</span>;
+
+<span class="c">// 1 · build (stateless)</span>
+<span class="k">const</span> built = <span class="k">await</span> fetch(<span class="s">`${API}/v1/build`</span>, {
+  method: <span class="s">"POST"</span>, headers: H, body: JSON.stringify({ script, params: { w: <span class="n">60</span> } }),
+}).then(r =&gt; r.json());
+console.log(built.ok, built.summary.volume);
+
+<span class="c">// 2 · save as a document → version</span>
+<span class="k">const</span> { version } = <span class="k">await</span> fetch(<span class="s">`${API}/v1/documents`</span>, {
+  method: <span class="s">"POST"</span>, headers: H, body: JSON.stringify({ name: <span class="s">"plate"</span>, script }),
+}).then(r =&gt; r.json());
+
+<span class="c">// 3 · export STEP</span>
+<span class="k">const</span> step = <span class="k">await</span> fetch(<span class="s">`${API}/v1/versions/${version.id}/export/step`</span>, { headers: H });
+<span class="k">await</span> require(<span class="s">"fs/promises"</span>).writeFile(<span class="s">"plate.step"</span>, Buffer.from(<span class="k">await</span> step.arrayBuffer()));</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 · Pricing -->
+    <section class="block" id="pricing">
+      <div class="wrap">
+        <div class="block-head">
+          <span class="label">Pricing</span>
+          <h2>Priced per build, not per seat.</h2>
+          <p>An agent iterating on a part makes hundreds of calls an hour. That should cost cents.</p>
+        </div>
+
+        <div class="tiers">
+          <div class="tier">
+            <span class="name">Free</span>
+            <div class="price">$0</div>
+            <div class="per">No card</div>
+            <ul>
+              <li>2,000 builds / month</li>
+              <li>All export formats</li>
+              <li>MCP server</li>
+              <li>Versioned documents</li>
+            </ul>
+            <a class="btn" href="#key">Get a key</a>
+          </div>
+          <div class="tier featured">
+            <span class="name">Pro</span>
+            <div class="price">$12</div>
+            <div class="per">per month</div>
+            <ul>
+              <li>100,000 builds / month</li>
+              <li>3-minute builds</li>
+              <li>Priority workers</li>
+              <li>Everything in Free</li>
+            </ul>
+            <a class="btn btn-dark" href="#key">Start free, upgrade later</a>
+          </div>
+          <div class="tier">
+            <span class="name">Scale</span>
+            <div class="price">$0.0004</div>
+            <div class="per">per build-second</div>
+            <ul>
+              <li>No monthly cap</li>
+              <li>Pay for compute used</li>
+              <li>Self-host licence: free</li>
+              <li>Open source</li>
+            </ul>
+            <a class="btn" href="docs.html#self-host">Self-host guide</a>
+          </div>
+        </div>
+
+        <div class="compare-wrap">
+          <span class="label">Against the Onshape API</span>
+          <div class="table-scroll">
+            <table class="compare">
+              <thead>
+                <tr><th scope="col"></th><th scope="col" class="us">Voncad Cloud Pro</th><th scope="col">Onshape Professional</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">Price</th><td class="us">$12 / month</td><td>$2,500 / user / year</td></tr>
+                <tr><th scope="row">API allowance</th><td class="us">100,000 builds / month</td><td>5,000 calls / user / year</td></tr>
+                <tr><th scope="row">Cost per call, at the allowance</th><td class="us">≈ $0.00012</td><td>≈ $0.50</td></tr>
+                <tr><th scope="row">Free tier API access</th><td class="us">2,000 builds / month</td><td>Not on the Free plan</td></tr>
+                <tr><th scope="row">MCP server</th><td class="us">Included, all plans</td><td>Draws on the same annual allowance</td></tr>
+                <tr><th scope="row">Kernel</th><td class="us">OpenCascade (open source)</td><td>Parasolid (proprietary)</td></tr>
+                <tr><th scope="row">Self-host</th><td class="us">Yes, one Docker command</td><td>No</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="footnote">* Onshape figures as of Oct 2026: plan prices from <a href="https://www.onshape.com/en/pricing" rel="noopener">onshape.com/pricing</a> (Standard $1,500, Professional $2,500 per user per year; API access on paid plans). Annual API call limits from Onshape's developer docs, <a href="https://onshape-public.github.io/docs/auth/limits/" rel="noopener">API limits</a>: 2,500 per user (Standard), 5,000 per user (Professional), 10,000 per full user (Enterprise). A Voncad build and an Onshape API call are not the same unit of work; one build often replaces several feature calls. Comparison is per call at each plan's included allowance.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7 · API key -->
+    <section class="block" id="key">
+      <div class="wrap">
+        <div class="block-head">
+          <span class="label">API key</span>
+          <h2>Get a key in five seconds.</h2>
+          <p>Free tier. No card. The key works for the REST API and MCP.</p>
+        </div>
+        <div class="key-box">
+          <form class="key-form" id="key-form" novalidate>
+            <label class="sr-only" for="key-email">Email</label>
+            <input id="key-email" name="email" type="email" autocomplete="email" placeholder="you@company.com" required>
+            <button class="btn btn-dark" type="submit">Create key</button>
+          </form>
+          <p class="key-status" id="key-status" role="status" aria-live="polite"></p>
+          <div class="code key-result" id="key-result" hidden>
+            <div class="code-bar"><span class="title">Your API key · shown once</span><button class="copy" type="button" data-copy aria-label="Copy API key"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy-label">Copy</span></button></div>
+            <pre><code id="key-value"></code></pre>
+          </div>
+          <p class="key-fine">Requests go to <code class="inline host">https://api.voncad.dev</code>.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8 · FAQ -->
+    <section class="block" id="faq">
+      <div class="wrap">
+        <div class="block-head">
+          <span class="label">Questions</span>
+          <h2>The short answers.</h2>
+        </div>
+        <div class="faq">
+          <details><summary>Is it really build123d?</summary><div><p>Yes. Your script runs against stock build123d on OpenCascade. Anything that works locally works here, within the sandbox: allowed imports are build123d, bd_warehouse, numpy, math and the standard numeric modules. No file or network access.</p></div></details>
+          <details><summary>Can I import STEP?</summary><div><p>Yes. <code>POST /v1/import</code> takes STEP, BREP or STL and returns a document with stable face ids, ready to measure, section, render or modify.</p></div></details>
+          <details><summary>Is my code private?</summary><div><p>Documents are private to your API key on every plan. Each build gets an unguessable version id that works as a share link, so only people you give it to can view or export it. Scripts run in isolated forked workers with memory and CPU limits, and nothing is shared between jobs.</p></div></details>
+          <details id="self-host"><summary>Can I self-host?</summary><div><p>Yes. It's open source. One command: <code>docker run -p 8000:8000 voncad-cloud</code>. Want a public URL for your agents? <code>./deploy/public.sh</code> opens a Cloudflare quick tunnel.</p></div></details>
+          <details><summary>How is it so cheap?</summary><div><p>An open-source kernel, so no licence fees. Stateless workers forked from a warm process, so a build costs a fraction of a CPU-second. No per-seat pricing, because agents aren't seats.</p></div></details>
+          <details><summary>Does it work with Claude, Cursor and ChatGPT?</summary><div><p>Anything that speaks MCP over HTTP: Claude Code, Claude Desktop, Cursor, and ChatGPT connectors. For everything else there's the REST API and <a href="llms.txt">llms.txt</a>.</p></div></details>
+        </div>
+      </div>
+    </section>
+
+    <footer class="legal wrap">
+      <div><a href="studio.html">Studio</a><a href="docs.html">Docs</a><a href="llms.txt">llms.txt</a></div>
+      <div style="margin-top:12px">© 2026 Voncad</div>
+    </footer>
+  </main>
+
+  <script src="js/material.js"></script>
+  <script src="js/stars.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# Render.com blueprint (free web service; sleeps when idle). New → Blueprint → this repo.
+services:
+  - type: web
+    name: voncad-cloud
+    runtime: docker
+    rootDir: voncad-cloud
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /v1/health
+    envVars:
+      - key: VONCAD_WORKERS
+        value: "1"
