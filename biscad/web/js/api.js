@@ -1,95 +1,84 @@
-// BISCAD — tiny API client shared by studio.html and view.html.
-// Base URL: same origin, or `?api=https://...` (persisted in localStorage; `?api=` with no value resets).
+const api_base_storage_key = 'biscad-api';
+const legacy_api_base_storage_key = 'biscad.api';
+const api_key_storage_key = 'biscad.key';
+const default_request_timeout_in_milliseconds = 120000;
+const default_ping_timeout_in_milliseconds = 3500;
+const object_url_lifetime_after_download_in_milliseconds = 4000;
+const longest_plain_text_error_in_characters = 300;
 
-const LS_API = 'biscad-api';
-const LS_API_OLD = 'biscad.api';
-const LS_KEY = 'biscad.key';
+export function read_stored_setting(setting_name) {
+  try { return localStorage.getItem(setting_name); } catch (storage_error) { return null; }
+}
 
-function initBase() {
-  const q = new URLSearchParams(location.search);
-  if (q.has('api')) {
-    const v = (q.get('api') || '').trim().replace(/\/+$/, '');
-    try { v ? localStorage.setItem(LS_API, v) : localStorage.removeItem(LS_API); localStorage.removeItem(LS_API_OLD); } catch (e) {}
-    return v || (typeof window !== 'undefined' && window.BISCAD_DEFAULT_API) || '';
-  }
-  try {
-    const v = localStorage.getItem(LS_API) || localStorage.getItem(LS_API_OLD);
-    if (v) return v.replace(/\/+$/, '');
-  } catch (e) {}
-  return (typeof window !== 'undefined' && window.BISCAD_DEFAULT_API) || '';
+export function write_stored_setting(setting_name, setting_text) {
+  try { setting_text ? localStorage.setItem(setting_name, setting_text) : localStorage.removeItem(setting_name); } catch (storage_error) { return; }
+}
+
+const strip_trailing_slashes = (url_text) => (url_text || '').trim().replace(/\/+$/, '');
+const is_json_response = (http_response) => (http_response.headers.get('content-type') || '').includes('json');
+
+function resolve_initial_api_base_url() {
+  const page_query = new URLSearchParams(location.search);
+  const deployment_default_api_base_url = window.BISCAD_DEFAULT_API || '';
+  if (!page_query.has('api')) return strip_trailing_slashes(read_stored_setting(api_base_storage_key) || read_stored_setting(legacy_api_base_storage_key)) || deployment_default_api_base_url;
+  const api_base_url_from_query = strip_trailing_slashes(page_query.get('api'));
+  write_stored_setting(api_base_storage_key, api_base_url_from_query);
+  write_stored_setting(legacy_api_base_storage_key, null);
+  return api_base_url_from_query || deployment_default_api_base_url;
+}
+
+function describe_failed_response(response_status, response_body) {
+  const message_from_json = response_body && typeof response_body === 'object' && (response_body.error?.message || response_body.detail?.message || response_body.detail || response_body.error || response_body.message);
+  const message_from_text = typeof response_body === 'string' && response_body.length < longest_plain_text_error_in_characters && response_body;
+  const failure_message = message_from_json || message_from_text || `HTTP ${response_status}`;
+  return typeof failure_message === 'string' ? failure_message : JSON.stringify(failure_message);
+}
+
+async function fetch_within_time_limit(request_url, fetch_options, timeout_in_milliseconds, read_response) {
+  const abort_controller = new AbortController();
+  const abort_timer = setTimeout(() => abort_controller.abort(), timeout_in_milliseconds);
+  try { return await read_response(await fetch(request_url, { ...fetch_options, signal: abort_controller.signal })); } finally { clearTimeout(abort_timer); }
+}
+
+async function read_response_or_throw(http_response) {
+  const response_body = is_json_response(http_response) ? await http_response.json() : await http_response.text();
+  if (http_response.ok) return response_body;
+  throw Object.assign(new Error(describe_failed_response(http_response.status, response_body)), { status: http_response.status, response_body, code: response_body?.error?.code });
 }
 
 export const api = {
-  base: initBase(),
-  get key() { try { return localStorage.getItem(LS_KEY) || ''; } catch (e) { return ''; } },
-  set key(v) { try { v ? localStorage.setItem(LS_KEY, v) : localStorage.removeItem(LS_KEY); } catch (e) {} },
-  setBase(v) {
-    this.base = (v || '').trim().replace(/\/+$/, '');
-    try { this.base ? localStorage.setItem(LS_API, this.base) : localStorage.removeItem(LS_API); } catch (e) {}
+  base_url: resolve_initial_api_base_url(),
+  get api_key() { return read_stored_setting(api_key_storage_key) || ''; },
+  set api_key(new_api_key) { write_stored_setting(api_key_storage_key, new_api_key); },
+  set_base_url(new_base_url) {
+    this.base_url = strip_trailing_slashes(new_base_url);
+    write_stored_setting(api_base_storage_key, this.base_url);
   },
-  url(path) {
-    if (/^https?:/.test(path)) return path;
-    return (this.base || '') + path;
+  resolve_url(path) { return /^https?:/.test(path) ? path : this.base_url + path; },
+  build_headers(extra_headers = {}) { return this.api_key ? { ...extra_headers, Authorization: 'Bearer ' + this.api_key } : { ...extra_headers }; },
+  request(http_method, path, request_body, { timeout_in_milliseconds = default_request_timeout_in_milliseconds } = {}) {
+    const fetch_options = { method: http_method, headers: this.build_headers(request_body ? { 'Content-Type': 'application/json' } : {}), body: request_body ? JSON.stringify(request_body) : undefined };
+    return fetch_within_time_limit(this.resolve_url(path), fetch_options, timeout_in_milliseconds, read_response_or_throw);
   },
-  headers(extra = {}) {
-    const h = { ...extra };
-    if (this.key) h.Authorization = 'Bearer ' + this.key;
-    return h;
+  get(path, request_options) { return this.request('GET', path, null, request_options); },
+  post(path, request_body, request_options) { return this.request('POST', path, request_body || {}, request_options); },
+  async blob_url(path) {
+    const http_response = await fetch(this.resolve_url(path), { headers: this.build_headers() });
+    if (!http_response.ok) throw new Error(`HTTP ${http_response.status}`);
+    return URL.createObjectURL(await http_response.blob());
   },
-  async req(method, path, body, { timeout = 120000 } = {}) {
-    const ctl = new AbortController();
-    const t = setTimeout(() => ctl.abort(), timeout);
-    try {
-      const res = await fetch(this.url(path), {
-        method,
-        headers: this.headers(body ? { 'Content-Type': 'application/json' } : {}),
-        body: body ? JSON.stringify(body) : undefined,
-        signal: ctl.signal,
-      });
-      const ct = res.headers.get('content-type') || '';
-      const data = ct.includes('json') ? await res.json() : await res.text();
-      if (!res.ok) {
-        const msg = (data && typeof data === 'object' && (data.error?.message || data.detail?.message || data.detail || data.error || data.message)) || (typeof data === 'string' && data.length < 300 && data) || `HTTP ${res.status}`;
-        const err = new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
-        err.status = res.status; err.data = data; err.code = data?.error?.code;
-        throw err;
-      }
-      return data;
-    } finally { clearTimeout(t); }
+  async download(path, file_name) {
+    const download_link = Object.assign(document.createElement('a'), { href: await this.blob_url(path), download: file_name });
+    download_link.click();
+    setTimeout(() => URL.revokeObjectURL(download_link.href), object_url_lifetime_after_download_in_milliseconds);
   },
-  get(path, opts) { return this.req('GET', path, null, opts); },
-  post(path, body, opts) { return this.req('POST', path, body || {}, opts); },
-  /** Download a binary endpoint (adds auth header) and save it. */
-  async download(path, filename) {
-    const res = await fetch(this.url(path), { headers: this.headers() });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const blob = await res.blob();
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-  },
-  async blobUrl(path) {
-    const res = await fetch(this.url(path), { headers: this.headers() });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return URL.createObjectURL(await res.blob());
-  },
-  /** true when the API answers (examples is cheap and public). */
-  async ping(timeout = 3500) {
-    try {
-      const ctl = new AbortController();
-      const t = setTimeout(() => ctl.abort(), timeout);
-      const res = await fetch(this.url('/v1/examples'), { headers: this.headers(), signal: ctl.signal });
-      clearTimeout(t);
-      if (!res.ok) return false;
-      const ct = res.headers.get('content-type') || '';
-      return ct.includes('json');
-    } catch (e) { return false; }
+  async is_reachable(timeout_in_milliseconds = default_ping_timeout_in_milliseconds) {
+    const answers_with_json = (http_response) => http_response.ok && is_json_response(http_response);
+    try { return await fetch_within_time_limit(this.resolve_url('/v1/examples'), { headers: this.build_headers() }, timeout_in_milliseconds, answers_with_json); } catch (network_error) { return false; }
   },
 };
 
-export const SAMPLES = [
+export const bundled_sample_models = [
   { id: 'quadruped', name: 'Quadruped robot (23-part assembly)' },
   { id: 'bracket', name: 'Angle bracket' },
   { id: 'flange', name: 'Bearing flange' },
@@ -97,4 +86,4 @@ export const SAMPLES = [
   { id: 'enclosure', name: 'Electronics enclosure' },
   { id: 'leg', name: 'Quadruped leg (assembly)' },
 ];
-export const sampleUrl = (id) => new URL(`../samples/${id}.json`, import.meta.url).href;
+export const resolve_sample_scene_url = (sample_id) => new URL(`../samples/${sample_id}.json`, import.meta.url).href;

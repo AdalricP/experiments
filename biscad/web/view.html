@@ -88,104 +88,93 @@
   <div class="loading" id="loading"></div>
 
   <script type="module">
-    import { Viewer, mountToolbar, PartTree, SelectionPanel, StepsBar, fmt } from './js/viewer.js';
-    import { api, sampleUrl } from './js/api.js';
+    import { Viewer, mount_toolbar, PartTree, SelectionPanel, StepsBar, format_number } from './js/viewer.js';
+    import { api, resolve_sample_scene_url } from './js/api.js';
 
-    const q = new URLSearchParams(location.search);
-    const vid = q.get('v');
-    const sample = q.get('sample');
-    const embed = q.get('embed') === '1';
-    const highlight = q.get('highlight');
-    const view = q.get('view');
-    if (embed) {
+    const page_query = new URLSearchParams(location.search);
+    const requested_version_id = page_query.get('v');
+    const is_embedded = page_query.get('embed') === '1';
+    const select_element = (selector) => document.querySelector(selector);
+    const set_page_title = (model_name, subtitle_text) => {
+      select_element('#name').textContent = model_name;
+      select_element('#sub').textContent = subtitle_text;
+    };
+
+    function add_embed_badge() {
       document.body.classList.add('embed');
-      const b = document.createElement('a');
-      b.className = 'vc-badge';
-      b.href = location.href.replace(/[?&]embed=1/, '').replace('view.html&', 'view.html?');
-      b.target = '_blank';
-      b.innerHTML = 'BISCAD<small>VIEW</small>';
-      document.body.appendChild(b);
+      const embed_badge = Object.assign(document.createElement('a'), { className: 'vc-badge', target: '_blank', innerHTML: 'BISCAD<small>VIEW</small>' });
+      embed_badge.href = location.href.replace(/[?&]embed=1/, '').replace('view.html&', 'view.html?');
+      document.body.appendChild(embed_badge);
+    }
+    if (is_embedded) add_embed_badge();
+
+    const viewer = new Viewer(select_element('#stage'), {
+      show_view_cube: !is_embedded, view_cube_top_offset_in_pixels: 44, is_transparent: is_embedded, show_grid: !is_embedded,
+      auto_rotate: is_embedded || page_query.get('spin') === '1', fit_margin_factor: is_embedded ? 1.12 : 1,
+      is_interactive: !is_embedded || page_query.get('pick') === '1', enable_keyboard_shortcuts: !is_embedded,
+      measure_with_kernel: (first_entity_id, second_entity_id, version_id) => api.post(`/v1/versions/${version_id}/measure`, { a: first_entity_id, b: second_entity_id }),
+    });
+    window.biscad_viewer = viewer;
+    if (!is_embedded) {
+      mount_toolbar(viewer, select_element('#tb'));
+      new PartTree(viewer, select_element('#tree'));
+      new SelectionPanel(viewer, select_element('#sel'));
+    }
+    const tree_panel = select_element('#treePanel');
+    select_element('#treeBtn').onclick = () => tree_panel.classList.toggle('hide');
+    viewer.addEventListener('selectionchange', (selection_event) => select_element('#selPanel').classList.toggle('hide', !selection_event.detail.ids.length && viewer.state.tool !== 'measure'));
+    viewer.addEventListener('statechange', () => { if (viewer.state.tool === 'measure') select_element('#selPanel').classList.remove('hide'); });
+    viewer.addEventListener('load', (load_event) => {
+      const statistics = load_event.detail.statistics;
+      const [width_in_millimeters, depth_in_millimeters, height_in_millimeters] = statistics.bounding_box.size.map((size_in_millimeters) => format_number(size_in_millimeters, 1));
+      select_element('#partCount').textContent = statistics.part_count;
+      select_element('#stats').innerHTML = `${width_in_millimeters} × ${depth_in_millimeters} × ${height_in_millimeters} mm<br>${statistics.face_count} faces · ${statistics.edge_count} edges · ${statistics.triangle_count.toLocaleString()} tris`;
+      if (statistics.part_count > 1 && innerWidth > 640 && !is_embedded) tree_panel.classList.remove('hide');
+    });
+    const steps_bar = new StepsBar(viewer, select_element('#steps'), { load_step_scene: (build_step) => api.get(build_step.scene_url) });
+
+    function show_load_failure(failure_html) {
+      select_element('#loading').remove();
+      document.body.appendChild(Object.assign(document.createElement('div'), { className: 'msg', innerHTML: `<div>${failure_html}</div>` }));
+      select_element('#name').textContent = 'Not found';
     }
 
-    const viewer = new Viewer(document.getElementById('stage'), {
-      cube: !embed, cubeTop: 44,
-      transparent: embed, grid: !embed, autoRotate: embed || q.get('spin') === '1', fitMargin: embed ? 1.12 : 1,
-      interactive: !embed || q.get('pick') === '1', shortcuts: !embed,
-      measureProvider: (a, b, v) => api.post(`/v1/versions/${v}/measure`, { a, b }),
-    });
-    window.biscadViewer = viewer;
-    if (!embed) {
-      mountToolbar(viewer, document.getElementById('tb'));
-      new PartTree(viewer, document.getElementById('tree'));
-      new SelectionPanel(viewer, document.getElementById('sel'));
-    }
-    const treePanel = document.getElementById('treePanel');
-    document.getElementById('treeBtn').onclick = () => treePanel.classList.toggle('hide');
-    viewer.addEventListener('selectionchange', (e) => {
-      document.getElementById('selPanel').classList.toggle('hide', !e.detail.ids.length && viewer.state.tool !== 'measure');
-    });
-    viewer.addEventListener('statechange', () => {
-      if (viewer.state.tool === 'measure') document.getElementById('selPanel').classList.remove('hide');
-    });
-    viewer.addEventListener('load', (e) => {
-      const s = e.detail.stats;
-      document.getElementById('partCount').textContent = s.parts;
-      document.getElementById('stats').innerHTML =
-        `${fmt(s.bbox.size[0], 1)} × ${fmt(s.bbox.size[1], 1)} × ${fmt(s.bbox.size[2], 1)} mm<br>${s.faces} faces · ${s.edges} edges · ${s.triangles.toLocaleString()} tris`;
-      if (s.parts > 1 && innerWidth > 640 && !embed) treePanel.classList.remove('hide');
-    });
-
-    const steps = new StepsBar(viewer, document.getElementById('steps'), {
-      loadStepScene: (st) => api.get(st.scene_url),
-    });
-
-    function fail(msg) {
-      document.getElementById('loading').remove();
-      const m = document.createElement('div');
-      m.className = 'msg';
-      m.innerHTML = `<div>${msg}</div>`;
-      document.body.appendChild(m);
-      document.getElementById('name').textContent = 'Not found';
+    async function show_saved_version(version_id) {
+      const version_path = `/v1/versions/${encodeURIComponent(version_id)}`;
+      const [version_scene, version_metadata] = await Promise.all([api.get(`${version_path}/scene`), api.get(version_path).catch(() => null)]);
+      viewer.load_scene(version_scene, { version_id });
+      const document_response = version_metadata?.document_id ? await api.get(`/v1/documents/${version_metadata.document_id}`).catch(() => null) : null;
+      const model_name = document_response?.document?.name || version_scene.name || version_id;
+      const version_summary = version_metadata?.summary;
+      set_page_title(model_name, version_summary?.mass_g_steel != null ? `${format_number(version_summary.volume / 1000, 2)} cm³ · ${format_number(version_summary.mass_g_steel, 1)} g steel` : version_id);
+      document.title = `${model_name} — BISCAD`;
+      const step_button = select_element('#stepBtn');
+      step_button.hidden = false;
+      step_button.onclick = () => api.download(`/v1/versions/${version_id}/export/step`, `${model_name.replace(/[^\w.-]+/g, '_')}.step`).catch((export_error) => viewer.flash('Export failed: ' + export_error.message));
+      select_element('#studioBtn').href = `studio.html?v=${encodeURIComponent(version_id)}` + (api.base_url ? `&api=${encodeURIComponent(api.base_url)}` : '');
+      api.get(`${version_path}/steps`).then((steps_response) => steps_bar.set_steps(steps_response.steps || [], { final_scene: version_scene })).catch(() => {});
     }
 
-    async function main() {
+    async function show_sample(sample_id) {
+      const sample_scene = await viewer.load(resolve_sample_scene_url(sample_id));
+      set_page_title(sample_scene.name || sample_id, 'sample');
+      document.title = `${sample_id} — BISCAD`;
+      select_element('#studioBtn').href = `studio.html?example=${sample_id}`;
+    }
+
+    async function show_requested_model() {
       try {
-        if (vid) {
-          const [scene, meta] = await Promise.all([
-            api.get(`/v1/versions/${encodeURIComponent(vid)}/scene`),
-            api.get(`/v1/versions/${encodeURIComponent(vid)}`).catch(() => null),
-          ]);
-          viewer.loadScene(scene, { versionId: vid });
-          let name = scene.name || vid;
-          if (meta?.document_id) {
-            try { const d = await api.get(`/v1/documents/${meta.document_id}`); name = d.document?.name || name; } catch (e) {}
-          }
-          document.getElementById('name').textContent = name;
-          document.title = `${name} — BISCAD`;
-          const sm = meta?.summary;
-          document.getElementById('sub').textContent = sm?.mass_g_steel != null ? `${fmt(sm.volume / 1000, 2)} cm³ · ${fmt(sm.mass_g_steel, 1)} g steel` : vid;
-          const sb = document.getElementById('stepBtn');
-          sb.hidden = false;
-          sb.onclick = () => api.download(`/v1/versions/${vid}/export/step`, `${name.replace(/[^\w.-]+/g, '_')}.step`).catch((e) => viewer.flash('Export failed: ' + e.message));
-          document.getElementById('studioBtn').href = `studio.html?v=${encodeURIComponent(vid)}` + (api.base ? `&api=${encodeURIComponent(api.base)}` : '');
-          api.get(`/v1/versions/${encodeURIComponent(vid)}/steps`).then((r) => steps.setSteps(r.steps || [], { finalScene: scene })).catch(() => {});
-        } else {
-          const id = (sample || 'quadruped').replace(/[^\w-]/g, '');
-          const scene = await viewer.load(sampleUrl(id));
-          document.getElementById('name').textContent = scene.name || id;
-          document.getElementById('sub').textContent = 'sample';
-          document.title = `${id} — BISCAD`;
-          document.getElementById('studioBtn').href = `studio.html?example=${id}`;
-        }
-        if (view) viewer.setView(view, false);
-        if (highlight) viewer.highlight(highlight);
-        document.getElementById('loading').remove();
-      } catch (e) {
-        console.error(e);
-        fail(vid ? `Could not load version <b>${vid}</b> — ${e.message}` : `Could not load sample — ${e.message}`);
+        if (requested_version_id) await show_saved_version(requested_version_id);
+        else await show_sample((page_query.get('sample') || 'quadruped').replace(/[^\w-]/g, ''));
+        if (page_query.get('view')) viewer.set_view(page_query.get('view'), false);
+        if (page_query.get('highlight')) viewer.highlight(page_query.get('highlight'));
+        select_element('#loading').remove();
+      } catch (load_error) {
+        console.error(load_error);
+        show_load_failure(requested_version_id ? `Could not load version <b>${requested_version_id}</b> — ${load_error.message}` : `Could not load sample — ${load_error.message}`);
       }
     }
-    main();
+    show_requested_model();
   </script>
 </body>
 </html>
