@@ -18,7 +18,7 @@ Auth: `Authorization: Bearer bsc_...` (optional; without it you get a small anon
 ## Script rules
 
 - No file/OS/network access (export_*, import_*, open, np.save/load are rejected; the server exports for you).
-- Allowed imports: build123d, numpy, math, cmath, random, itertools, functools, operator, typing, dataclasses, enum, copy, collections, statistics, fractions, decimal, string, re.
+- Allowed imports: build123d, numpy, math, cmath, random, itertools, functools, operator, typing, dataclasses, enum, copy, collections, statistics, fractions, decimal, string, re, constraint_sketch.
 - Not allowed: file or network access, open, exec, eval, compile, getattr/setattr/delattr, globals/locals/vars, dunder attributes or dunder strings, relative imports.
 - print() output is returned in `logs`. Default time limit 60 s per job, with a memory cap.
 - If neither `result` nor `show()` is used, the last build123d shape or BuildPart in scope is taken.
@@ -33,6 +33,22 @@ Minimal script:
             Hole(params["hole"] / 2)
         fillet(plate.edges().filter_by(Axis.Z), 3)
     result = plate.part
+
+Constraint sketches (`from constraint_sketch import ConstraintSketch`): draw rough points, add constraints, solve.
+
+    sketch = ConstraintSketch()
+    a = sketch.point(0, 0, fixed=True); b = sketch.point(40, 3); c = sketch.point(38, 22); d = sketch.point(1, 20)
+    bottom, right, top, left = sketch.line(a, b), sketch.line(b, c), sketch.line(c, d), sketch.line(d, a)
+    sketch.horizontal(bottom); sketch.vertical(right); sketch.parallel(top, bottom); sketch.perpendicular(left, bottom)
+    sketch.length(bottom, 60); sketch.distance(b, c, 25)
+    hole = sketch.circle(sketch.point(30, 12), radius=4); sketch.radius(hole, 4)
+    solution = sketch.solve()   # raises ConstraintSketchError naming the first conflicting constraint
+    print(solution.degrees_of_freedom)   # 0 = fully constrained; position(point), radius(circle)
+    result = extrude(solution.face(), 6)   # outer loop = lines in order, circles = holes
+
+- Constraints: fixed, coincident, horizontal, vertical, parallel, perpendicular, length, distance (point-point), equal (lines or circles), angle (degrees, signed, first to second line), radius, tangent (line, circle), midpoint (point, line), point_on_line.
+- Use `face(outer_loop_lines=[...], hole_circles=[...], plane=Plane.XZ)` when the sketch has construction lines.
+- Example: GET /v1/examples, id `constrained_plate`.
 
 ## REST endpoints
 

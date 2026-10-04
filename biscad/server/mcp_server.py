@@ -19,7 +19,7 @@ render -> get_topology to find face/edge ids -> measure / section / check_manufa
 
 Script rules:
 - `from build123d import *`. Allowed imports: build123d, math, numpy, random, itertools, functools,
-  collections, typing, dataclasses, enum, copy, statistics, fractions, decimal, string, re.
+  collections, typing, dataclasses, enum, copy, statistics, fractions, decimal, string, re, constraint_sketch.
 - Put the final shape in `result` (a Part, Compound, list or dict of shapes) or call `show(shape, ...)`.
 - Declare tunable values as a literal dict at top level: `params = {"width": 40, "hole": 6.5}`;
   callers can override them per build (configurations). Units are millimetres, Z is up.
@@ -48,6 +48,8 @@ build123d cheatsheet:
   result = p.part
 Selectors: .faces()/.edges()/.vertices(), .filter_by(Axis.Z | GeomType.CIRCLE), .sort_by(Axis.Z),
 .group_by(Axis.Z)[-1], .sort_by_distance((x, y, z)). Algebra mode also works: `result = Box(10,10,10) - Cylinder(3, 10)`.
+Constraint sketch: `s = ConstraintSketch(); a = s.point(0, 0, fixed=True); b = s.point(40, 3); l = s.line(a, b); s.horizontal(l); s.length(l, 60)`
+(+ vertical parallel perpendicular distance equal angle radius tangent midpoint point_on_line coincident; circle(center, radius=)) -> `sol = s.solve()` (sol.degrees_of_freedom; error names the conflict) -> `extrude(sol.face(), 6)`.
 """
 MAX_LOG_CHARACTERS_IN_FAILURE_HINT = 1500
 MAX_STDOUT_CHARACTERS_IN_BRIEF = 2000

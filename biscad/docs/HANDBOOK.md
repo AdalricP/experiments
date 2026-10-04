@@ -1498,18 +1498,36 @@ mocks of the kernel; a passing suite means real parts really built.
 ## 17. Roadmap
 
 BISCAD matches Onshape's API on build, reference, analysis, export and versioning, far
-more cheaply. Onshape still has four things BISCAD lacks. Here is each, and how to add it,
-mostly in few lines, because the model is code and the kernel is OCCT.
+more cheaply. Onshape had four things BISCAD lacked. Constraint sketches are now done. Here
+is each of the other three, and how to add it, mostly in few lines, because the model is
+code and the kernel is OCCT.
 
-### Sketches with a constraint solver
+### Constraint sketches (done)
 
 Onshape sketches are dimensionally constrained: you draw roughly, add "this edge is
 10 mm, these two are parallel, this is tangent", and a solver places the geometry.
-build123d sketches are imperative (you give coordinates). To add constraints: wrap a 2D
-geometric constraint solver (OCCT has `PlaneGCS`-style building blocks, or vendor
-FreeCAD's `planegcs`) and expose a small sketch DSL that emits solved coordinates into a
-build123d `BuildSketch`. The build-step and reference machinery already handle whatever
-geometry comes out. Estimate: a new `sketch.py` plus one MCP tool.
+build123d sketches are imperative (you give coordinates). BISCAD now has
+`server/constraint_sketch.py`, which scripts import as `constraint_sketch`.
+
+- You add points, lines and circles at rough positions. Then you add constraints:
+  fixed, coincident, horizontal, vertical, parallel, perpendicular, length, distance,
+  equal (lines or circles), angle, radius, tangent (line and circle), midpoint and
+  point_on_line.
+- `solve()` finds the geometry with `scipy.optimize.least_squares`. Each constraint is a
+  residual that is zero when the constraint holds.
+- If a constraint cannot hold, `solve()` raises `ConstraintSketchError`. The message names
+  the first conflicting constraint (found by a binary search over the constraint order)
+  and lists each unsatisfied constraint with its error.
+- The solution reports `degrees_of_freedom`: the parameter count minus the rank of the
+  Jacobian. Zero means fully constrained. An agent reads this to know if it must add
+  constraints.
+- `solution.face()` returns a build123d `Face`: the lines, in order, make the outer loop
+  and the circles make holes. Use `extrude()` on it. The example `constrained_plate` shows
+  a full plate.
+
+Limits: there are no arcs or splines yet. The solver is local, so the rough positions
+select which solution you get (for example, which side of a line a tangent circle sits
+on). Distance applies only between two points.
 
 ### Assembly mates
 

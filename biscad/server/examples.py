@@ -279,6 +279,63 @@ for fx, fname in ((1, "front"), (-1, "rear")):
 result = Compound(label="quadruped", children=parts)
 '''
 
+CONSTRAINED_PLATE = '''\
+from build123d import *
+from constraint_sketch import ConstraintSketch
+
+params = {"width": 90, "height": 60, "foot": 30, "slope_angle": 135, "hole": 4, "hole_inset": 17, "thickness": 6}
+
+# Draw roughly, then let constraints place the geometry.
+sketch = ConstraintSketch()
+origin = sketch.point(0, 0, fixed=True)
+bottom_right = sketch.point(85, 2)
+step_corner = sketch.point(88, 28)
+slope_start = sketch.point(55, 31)
+slope_end = sketch.point(30, 58)
+top_left = sketch.point(2, 62)
+bottom = sketch.line(origin, bottom_right)
+right = sketch.line(bottom_right, step_corner)
+shelf = sketch.line(step_corner, slope_start)
+slope = sketch.line(slope_start, slope_end)
+top = sketch.line(slope_end, top_left)
+left = sketch.line(top_left, origin)
+outline = [bottom, right, shelf, slope, top, left]
+sketch.horizontal(bottom)
+sketch.vertical(right)
+sketch.parallel(shelf, bottom)
+sketch.parallel(top, bottom)
+sketch.perpendicular(left, bottom)
+sketch.length(bottom, params["width"])
+sketch.length(right, params["foot"])
+sketch.length(left, params["height"])
+sketch.angle(bottom, slope, params["slope_angle"])
+sketch.equal(shelf, top)
+
+# Three equal bolt holes, placed by construction lines.
+corner_hole = sketch.circle(sketch.point(12, 12), radius=3)
+foot_hole = sketch.circle(sketch.point(74, 16), radius=3)
+top_hole = sketch.circle(sketch.point(13, 47), radius=3)
+sketch.radius(corner_hole, params["hole"])
+sketch.equal(foot_hole, corner_hole)
+sketch.equal(top_hole, corner_hole)
+corner_diagonal = sketch.line(origin, corner_hole.center_point)
+sketch.angle(bottom, corner_diagonal, 45)
+sketch.length(corner_diagonal, params["hole_inset"])
+sketch.midpoint(foot_hole.center_point, sketch.line(bottom_right, slope_start))
+top_diagonal = sketch.line(top_left, top_hole.center_point)
+sketch.angle(left, top_diagonal, 45)
+sketch.equal(top_diagonal, corner_diagonal)
+
+solution = sketch.solve()
+print("degrees of freedom left:", solution.degrees_of_freedom)
+with BuildPart() as plate:
+    add(solution.face(outer_loop_lines=outline))
+    extrude(amount=params["thickness"])
+    chamfer(plate.edges().group_by(Axis.Z)[-1].filter_by(GeomType.LINE), 1)
+
+result = plate.part
+'''
+
 EXAMPLES = [
     {"id": "quadruped", "name": "Quadruped robot (23-part assembly)", "script": QUADRUPED},
     {"id": "bracket", "name": "Angle bracket", "script": BRACKET},
@@ -286,4 +343,5 @@ EXAMPLES = [
     {"id": "gear", "name": "Spur gear", "script": GEAR},
     {"id": "enclosure", "name": "Electronics enclosure", "script": ENCLOSURE},
     {"id": "leg", "name": "Quadruped leg (assembly)", "script": LEG},
+    {"id": "constrained_plate", "name": "Constraint-sketched plate", "script": CONSTRAINED_PLATE},
 ]

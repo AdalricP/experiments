@@ -17,14 +17,17 @@ from contextlib import redirect_stdout
 import build123d as bd
 import numpy as np
 
+import constraint_sketch
+
 from steps import StepRecorder, finalize_recorded_steps
 from tessellate import build_scene_and_topology, flatten_into_leaf_parts, set_mesh_quality
 
 ALLOWED_IMPORTS = {
     "build123d", "math", "cmath", "random", "itertools", "functools", "operator", "typing",
     "dataclasses", "enum", "copy", "numpy", "collections", "statistics", "fractions", "decimal",
-    "string", "re",
+    "string", "re", "constraint_sketch",
 }
+MODULES_PRELOADED_FOR_WARM_FORKED_WORKERS = (constraint_sketch,)
 BANNED_ATTRIBUTE_NAME_PREFIXES = ("export", "import", "write", "read", "save", "load", "dump", "to_file",
                                   "from_file", "open", "f_", "gi_", "cr_", "ag_", "tb_", "co_")
 BANNED_ATTRIBUTE_NAMES = {

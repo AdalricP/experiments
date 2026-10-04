@@ -13,6 +13,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import agent
+import constraint_sketch
 import app as application_module
 import examples
 
@@ -34,6 +35,13 @@ SANDBOX_ESCAPES_AND_SCRIPT_ERRORS = [
     ("'{0.__class__}'.format(1)", "'__'"),
     ("from build123d import *\nos", "not available"),
     ("import build123d.exporters", "not allowed"),
+    ("import constraint_sketch\nconstraint_sketch.os", "not available"),
+    ("import constraint_sketch\nconstraint_sketch.np", "no attribute"),
+    ("import constraint_sketch\nconstraint_sketch.numpy", "no attribute"),
+    ("import constraint_sketch\nconstraint_sketch.scipy.optimize", "no attribute"),
+    ("import constraint_sketch\nconstraint_sketch.build123d", "no attribute"),
+    ("from constraint_sketch import scipy", "cannot import"),
+    ("import constraint_sketch.scipy", "not allowed"),
 ]
 
 
@@ -298,3 +306,83 @@ def test_check_issues_carry_persistent_face_references(api_client):
     overhangs = [issue for issue in report["issues"] if issue["code"] == "overhangs"]
     assert overhangs and len(overhangs[0]["persistent_refs"]) == len(overhangs[0]["refs"])
     assert all("/#" in reference for reference in overhangs[0]["persistent_refs"])
+
+
+def rectangle_sketch_from_rough_corners():
+    sketch = constraint_sketch.ConstraintSketch()
+    corners = [sketch.point(0, 0, fixed=True), sketch.point(40, 3), sketch.point(38, 22), sketch.point(1, 20)]
+    bottom, right, top, left = [sketch.line(corners[corner_index], corners[(corner_index + 1) % 4]) for corner_index in range(4)]
+    sketch.horizontal(bottom)
+    sketch.vertical(right)
+    sketch.parallel(top, bottom)
+    sketch.perpendicular(left, bottom)
+    sketch.length(bottom, 60)
+    return sketch, corners, (bottom, right, top, left)
+
+
+def test_constraint_sketch_solves_a_rectangle_to_exact_coordinates():
+    sketch, corners, (bottom, right, top, left) = rectangle_sketch_from_rough_corners()
+    sketch.distance(corners[1], corners[2], 25)
+    hole = sketch.circle(sketch.point(30, 12), radius=3)
+    sketch.radius(hole, 4)
+    sketch.midpoint(hole.center_point, sketch.line(corners[0], corners[2]))
+    solution = sketch.solve()
+    expected_corners = [(0, 0), (60, 0), (60, 25), (0, 25), (30, 12.5)]
+    for corner, (expected_x, expected_y) in zip(corners + [hole.center_point], expected_corners):
+        assert solution.position(corner) == pytest.approx((expected_x, expected_y), abs=1e-6)
+    assert solution.radius(hole) == pytest.approx(4, abs=1e-6)
+    assert solution.is_fully_constrained and solution.degrees_of_freedom == 0
+    face = solution.face(outer_loop_lines=[bottom, right, top, left])
+    assert face.is_valid and face.area == pytest.approx(60 * 25 - 16 * 3.141592653589793, abs=1e-3)
+
+
+def test_constraint_sketch_reports_remaining_degrees_of_freedom():
+    sketch, corners, _lines = rectangle_sketch_from_rough_corners()
+    assert sketch.solve().degrees_of_freedom == 1
+    sketch.distance(corners[1], corners[2], 25)
+    assert sketch.solve().degrees_of_freedom == 0
+    free_circle = sketch.circle(sketch.point(30, 12), radius=4)
+    assert sketch.solve().degrees_of_freedom == 3
+    fixed_circle = sketch.circle(sketch.point(5, 5, fixed=True), radius=4)
+    sketch.equal(free_circle, fixed_circle)
+    assert sketch.solve().degrees_of_freedom == 3
+    sketch.radius(fixed_circle, 3)
+    assert sketch.solve().degrees_of_freedom == 2
+
+
+def test_constraint_sketch_names_the_conflicting_constraint():
+    sketch, corners, (bottom, right, top, left) = rectangle_sketch_from_rough_corners()
+    sketch.distance(corners[1], corners[2], 25)
+    sketch.length(top, 50)
+    with pytest.raises(constraint_sketch.ConstraintSketchError) as raised_error:
+        sketch.solve()
+    assert "over-constrained" in str(raised_error.value) and "#7 length(line 2" in str(raised_error.value)
+    with pytest.raises(constraint_sketch.ConstraintSketchError, match="expects a SketchLine"):
+        sketch.horizontal(corners[0])
+
+
+def test_constraint_sketch_tangent_angle_and_point_on_line():
+    sketch = constraint_sketch.ConstraintSketch()
+    origin = sketch.point(0, 0, fixed=True)
+    base = sketch.line(origin, sketch.point(50, 1))
+    rafter = sketch.line(origin, sketch.point(30, 25))
+    sketch.horizontal(base)
+    sketch.angle(base, rafter, 30)
+    sketch.length(rafter, 40)
+    wheel = sketch.circle(sketch.point(20, 4), radius=5)
+    sketch.radius(wheel, 5)
+    sketch.tangent(base, wheel)
+    sketch.tangent(rafter, wheel)
+    solution = sketch.solve()
+    assert solution.position(rafter.end_point) == pytest.approx((40 * 3 ** 0.5 / 2, 20), abs=1e-6)
+    assert solution.position(wheel.center_point)[1] == pytest.approx(5, abs=1e-6)
+    assert solution.degrees_of_freedom == 1
+
+
+def test_constrained_plate_example_builds_fully_constrained(api_client):
+    version = build_without_scene(api_client, examples.CONSTRAINED_PLATE)
+    assert version["ok"], version.get("error")
+    assert version["summary"]["bbox"]["max"] == pytest.approx([90, 60, 6], abs=1e-3)
+    assert "degrees of freedom left: 0" in version["logs"]
+    failing = build_without_scene(api_client, examples.CONSTRAINED_PLATE, {"foot": 70})
+    assert not failing["ok"] and "ConstraintSketchError" in failing["error"]
