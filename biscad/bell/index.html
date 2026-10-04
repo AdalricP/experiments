@@ -1,0 +1,94 @@
+<title>BISCAD Bell</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+/* One quiet console: a status plate on a deep oxblood ground; one big arm control. */
+:root {
+  --ground: #f4eeee; --plate: #ffffff; --ink: #1d0f10; --muted: #6e5a5c; --blood: #8a0f1e; --line: rgba(60, 10, 16, .14);
+  --display: "Big Shoulders Display", "Arial Narrow", sans-serif; --body: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ground: #140708; --plate: #1f0c0e; --ink: #f3e7e7; --muted: #b29a9c; --blood: #c41e30; --line: rgba(255, 210, 214, .12); color-scheme: dark } }
+:root[data-theme="dark"] { --ground: #140708; --plate: #1f0c0e; --ink: #f3e7e7; --muted: #b29a9c; --blood: #c41e30; --line: rgba(255, 210, 214, .12); color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--ground); color: var(--ink); font: 15px/1.55 var(--body); margin: 0; padding-inline: 16px; padding-block: 48px }
+main { max-width: 560px; margin: 0 auto; display: grid; gap: 28px }
+.mark { font: 900 13px var(--display); letter-spacing: .5em; text-transform: uppercase; color: var(--blood) }
+h1 { font: 700 clamp(40px, 9vw, 64px)/0.95 var(--display); text-transform: uppercase; margin: 6px 0 0; text-wrap: balance }
+p { margin: 0; color: var(--muted); max-width: 60ch }
+.plate { background: var(--plate); border: 1px solid var(--line); padding: 22px; display: grid; gap: 10px }
+.label { font: 500 11px var(--body); letter-spacing: .22em; text-transform: uppercase; color: var(--muted) }
+.state { font: 700 28px var(--display); text-transform: uppercase; letter-spacing: .02em }
+.state[data-kind="done"] { color: #2f7d4a } .state[data-kind="help-needed"], .state[data-kind="credits-needed"] { color: var(--blood) }
+.meta { font: 12px var(--mono); color: var(--muted) }
+button { font: 500 12px var(--body); letter-spacing: .16em; text-transform: uppercase; border: 1px solid var(--line); background: var(--plate); color: var(--ink); padding: 12px 16px; cursor: pointer }
+button:focus-visible { outline: 2px solid var(--blood); outline-offset: 3px }
+#arm { background: var(--blood); color: #fff; border-color: var(--blood); padding: 18px; font-size: 13px }
+#arm[aria-pressed="true"] { background: transparent; color: var(--blood) }
+.tones { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px }
+</style>
+
+<main>
+  <div>
+    <div class="mark">BISCAD</div>
+    <h1>Overnight bell</h1>
+  </div>
+  <p>Keep this tab open on your laptop and press Arm once. When the build agent posts news, this page plays a calm tone: one for finished, one for help needed, one for credits needed, one for stopped.</p>
+  <button id="arm" aria-pressed="false">Arm the bell</button>
+  <section class="plate" aria-live="polite">
+    <span class="label">Latest from the agent</span>
+    <div class="state" id="state" data-kind="">Waiting</div>
+    <p id="message">No news yet.</p>
+    <div class="meta" id="when"></div>
+  </section>
+  <section class="plate">
+    <span class="label">Preview the tones</span>
+    <div class="tones">
+      <button data-tone="done">Finished</button>
+      <button data-tone="help-needed">Help needed</button>
+      <button data-tone="credits-needed">Credits needed</button>
+      <button data-tone="stopped">Stopped</button>
+    </div>
+  </section>
+</main>
+
+<script>
+const titles = { "done": "Finished", "help-needed": "Help needed", "credits-needed": "Credits needed", "stopped": "Stopped", "test": "Test ring" };
+const sounds = Object.fromEntries(["done", "help-needed", "credits-needed", "stopped"].map(name => [name, new Audio(name + ".mp3")]));
+sounds.test = sounds.done;
+let is_armed = false;
+let last_seen_timestamp = null;
+
+function play_tone(kind) {
+  const sound = sounds[kind] || sounds.done;
+  sound.currentTime = 0;
+  sound.play().catch(() => {});
+}
+
+function show_status(status) {
+  const state = document.getElementById("state");
+  state.textContent = titles[status.kind] || status.kind || "Waiting";
+  state.dataset.kind = status.kind || "";
+  document.getElementById("message").textContent = status.message || "";
+  document.getElementById("when").textContent = status.at ? new Date(status.at).toLocaleString() : "";
+}
+
+document.getElementById("arm").addEventListener("click", event => {
+  is_armed = !is_armed;
+  event.currentTarget.setAttribute("aria-pressed", String(is_armed));
+  event.currentTarget.textContent = is_armed ? "Armed — tap to disarm" : "Arm the bell";
+  if (is_armed) Object.values(sounds).forEach(sound => { sound.muted = true; sound.play().then(() => { sound.pause(); sound.muted = false; }).catch(() => { sound.muted = false; }); });
+});
+document.querySelectorAll("[data-tone]").forEach(button => button.addEventListener("click", () => play_tone(button.dataset.tone)));
+
+(async () => {
+  const db = await claude.use("db");
+  if (!db) { document.getElementById("message").textContent = "Sign in to claude.ai to receive news from the agent."; return; }
+  db.doc("bell/status").onSnapshot(snapshot => {
+    if (!snapshot.exists) return;
+    const status = snapshot.data();
+    show_status(status);
+    if (last_seen_timestamp !== null && status.at !== last_seen_timestamp && is_armed) play_tone(status.kind);
+    last_seen_timestamp = status.at;
+  });
+})();
+</script>
