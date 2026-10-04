@@ -358,9 +358,13 @@ def _mesh_arrays_for_part(part_index: int, buffers: dict) -> dict:
             f"p{part_index}_edges": _edge_segments_from_polylines(buffers["polylines"])}
 
 
-def _write_compact_json(path: str, content):
+def _write_json_text(path: str, content, separators=None):
     with open(path, "w") as json_file:
-        json.dump(content, json_file, separators=(",", ":"))
+        json_file.write(json.dumps(content, separators=separators))
+
+
+def _write_compact_json(path: str, content):
+    _write_json_text(path, content, separators=(",", ":"))
 
 
 def write_meshed_parts_to_directory(parts: list, output_directory: str, should_write_brep: bool = True):
@@ -374,8 +378,7 @@ def write_meshed_parts_to_directory(parts: list, output_directory: str, should_w
     np.savez_compressed(os.path.join(output_directory, "mesh.npz"), **mesh_arrays)
     part_colors = [{"name": name, "color": scene_part["color"]}
                    for (name, _shape, _color), scene_part in zip(parts, scene["parts"])]
-    with open(os.path.join(output_directory, "parts.json"), "w") as parts_file:
-        json.dump(part_colors, parts_file)
+    _write_json_text(os.path.join(output_directory, "parts.json"), part_colors)
     for part_index, (_name, shape, _color) in enumerate(parts if should_write_brep else []):
         bd.export_brep(shape, os.path.join(output_directory, f"part{part_index}.brep"))
     return scene, mesh_buffers
@@ -422,8 +425,7 @@ def _write_build_step_snapshots(recorder: StepRecorder, output_directory: str, q
             step_metadata["index"], step_shape, os.path.join(output_directory, "steps", str(step_metadata["index"])))}
         for step_metadata, step_shape in finalize_recorded_steps(recorder)]
     set_mesh_quality(quality)
-    with open(os.path.join(output_directory, "steps.json"), "w") as steps_file:
-        json.dump(steps_metadata, steps_file)
+    _write_json_text(os.path.join(output_directory, "steps.json"), steps_metadata)
     return steps_metadata
 
 

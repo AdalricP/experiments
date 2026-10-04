@@ -84,8 +84,9 @@ def _fit_projection(view, framing_directory: str, hidden_part_ids: set, canvas_w
     framing_topology = _load_json(os.path.join(framing_directory, "topology.json"))
     framing_mesh = np.load(os.path.join(framing_directory, "mesh.npz"))
     view_direction, right_axis, up_axis, center = _camera_axes(view, framing_topology["bbox"])
-    visible_positions = [framing_mesh[f"{part['id']}_pos"] for part in framing_topology["parts"]
-                         if part["id"] not in hidden_part_ids and len(framing_mesh[f"{part['id']}_pos"])]
+    candidate_positions = [framing_mesh[f"{part['id']}_pos"] for part in framing_topology["parts"]
+                           if part["id"] not in hidden_part_ids]
+    visible_positions = [positions for positions in candidate_positions if len(positions)]
     if not visible_positions:
         return None, 0.0
     relative = np.concatenate(visible_positions) - center
@@ -124,40 +125,65 @@ def _shaded_triangles_of_part(part: dict, mesh, base_color: np.ndarray, highligh
 
 
 def _paint_triangles_back_to_front(image, depth_image, shaded_parts: list):
-    draw, depth_draw = ImageDraw.Draw(image), ImageDraw.Draw(depth_image)
+    color_raster, depth_raster = ImageDraw.Draw(image).draw, ImageDraw.Draw(depth_image).draw
     projected_triangles = np.concatenate([shaded[1] for shaded in shaded_parts])
+    triangle_depths = np.concatenate([shaded[0] for shaded in shaded_parts])
     colors = np.concatenate([shaded[2] for shaded in shaded_parts]).astype(int)
-    for triangle_index in np.argsort(np.concatenate([shaded[0] for shaded in shaded_parts])):
-        polygon = [(float(projected_triangles[triangle_index, corner, 0]), float(projected_triangles[triangle_index, corner, 1]))
-                   for corner in range(3)]
-        color = tuple(colors[triangle_index])
-        draw.polygon(polygon, fill=color, outline=color)
-        triangle_depth = float(projected_triangles[triangle_index, :, 2].mean())
-        depth_draw.polygon(polygon, fill=triangle_depth, outline=triangle_depth)
+    painting_order = np.argsort(triangle_depths)
+    flat_polygons = projected_triangles[painting_order, :, :2].reshape(-1, 6).tolist()
+    ordered_colors = [tuple(color) for color in colors[painting_order].tolist()]
+    for flat_polygon, color, triangle_depth in zip(flat_polygons, ordered_colors, triangle_depths[painting_order].tolist()):
+        color_raster.draw_polygon(flat_polygon, color_raster.draw_ink(color), 1)
+        depth_raster.draw_polygon(flat_polygon, depth_raster.draw_ink(triangle_depth), 1)
 
 
-def _draw_visible_parts_of_segment(draw, segment_start, segment_end, depth_buffer, depth_tolerance: float):
-    canvas_height, canvas_width = depth_buffer.shape
-    sample_count = max(int(math.hypot(segment_end[0] - segment_start[0], segment_end[1] - segment_start[1]) / 3), 1)
-    samples = segment_start[None] + (segment_end - segment_start)[None] * np.linspace(0, 1, sample_count + 1)[:, None]
-    pixel_columns = np.clip(samples[:, 0].astype(int), 0, canvas_width - 1)
-    pixel_rows = np.clip(samples[:, 1].astype(int), 0, canvas_height - 1)
-    is_visible = samples[:, 2] >= depth_buffer[pixel_rows, pixel_columns] - depth_tolerance
-    for sample_index in range(sample_count):
+def _sample_points_along_segments(segment_starts: np.ndarray, segment_ends: np.ndarray, sample_count: int) -> np.ndarray:
+    interpolation_fractions = np.linspace(0, 1, sample_count + 1)
+    return segment_starts[:, None] + (segment_ends - segment_starts)[:, None] * interpolation_fractions[None, :, None]
+
+
+def _visible_runs_of_samples(samples: np.ndarray, is_visible: np.ndarray) -> list:
+    visible_runs, current_run = [], []
+    for sample_index in range(len(samples) - 1):
         if is_visible[sample_index] and is_visible[sample_index + 1]:
-            draw.line([(samples[sample_index, 0], samples[sample_index, 1]),
-                       (samples[sample_index + 1, 0], samples[sample_index + 1, 1])],
-                      fill=EDGE_COLOR_RGB, width=SUPERSAMPLING_FACTOR + 1)
+            current_run = current_run or [samples[sample_index]]
+            current_run.append(samples[sample_index + 1])
+            continue
+        if current_run:
+            visible_runs.append(current_run)
+        current_run = []
+    return visible_runs + [current_run] if current_run else visible_runs
+
+
+def _visible_polylines_of_segments(projected_segments: np.ndarray, depth_buffer, depth_tolerance: float) -> list:
+    canvas_height, canvas_width = depth_buffer.shape
+    segment_starts, segment_ends = projected_segments[:, 0], projected_segments[:, 1]
+    screen_offsets = (segment_ends[:, :2] - segment_starts[:, :2]).tolist()
+    sample_counts = np.array([max(int(math.hypot(offset_x, offset_y) / 3), 1) for offset_x, offset_y in screen_offsets])
+    polylines_by_segment_index = {}
+    for sample_count in np.unique(sample_counts).tolist():
+        segment_indices = np.flatnonzero(sample_counts == sample_count)
+        samples = _sample_points_along_segments(segment_starts[segment_indices], segment_ends[segment_indices], sample_count)
+        pixel_columns = np.clip(samples[:, :, 0].astype(int), 0, canvas_width - 1)
+        pixel_rows = np.clip(samples[:, :, 1].astype(int), 0, canvas_height - 1)
+        is_visible = samples[:, :, 2] >= depth_buffer[pixel_rows, pixel_columns] - depth_tolerance
+        for segment_index, segment_samples, segment_visibility in zip(
+                segment_indices.tolist(), samples[:, :, :2].tolist(), is_visible.tolist()):
+            polylines_by_segment_index[segment_index] = _visible_runs_of_samples(segment_samples, segment_visibility)
+    return [polyline for segment_index in sorted(polylines_by_segment_index)
+            for polyline in polylines_by_segment_index[segment_index]]
 
 
 def _draw_visible_edges(image, visible_parts: list, mesh, projection: ViewProjection, depth_buffer, model_span: float):
-    draw = ImageDraw.Draw(image)
+    raster = ImageDraw.Draw(image).draw
+    edge_ink = raster.draw_ink(EDGE_COLOR_RGB)
     for part in visible_parts:
         edge_segments = mesh[f"{part['id']}_edges"]
         if not len(edge_segments):
             continue
-        for segment_start, segment_end in _project(projection, edge_segments.astype(float)).reshape(-1, 2, 3):
-            _draw_visible_parts_of_segment(draw, segment_start, segment_end, depth_buffer, 0.012 * model_span)
+        projected_segments = _project(projection, edge_segments.astype(float)).reshape(-1, 2, 3)
+        for polyline in _visible_polylines_of_segments(projected_segments, depth_buffer, 0.012 * model_span):
+            raster.draw_lines(polyline, edge_ink, SUPERSAMPLING_FACTOR + 1)
 
 
 def _should_label_face(face: dict, should_label_all: bool, highlighted_ids: set, model_span: float) -> bool:

@@ -12,12 +12,14 @@ from OCP.BRepMesh import BRepMesh_IncrementalMesh
 from OCP.GCPnts import GCPnts_TangentialDeflection
 from OCP.TopAbs import TopAbs_REVERSED
 from OCP.TopLoc import TopLoc_Location
+from OCP.gp import gp_TrsfForm
 
 PART_COLOR_PALETTE = ["#d9d7d2", "#4a4a4a", "#b9c3c9", "#cdbfa8", "#9aa79a", "#c9b2b2", "#a7a2b8", "#8f8f8f"]
 REVOLVED_SURFACE_TYPES = ("cylinder", "cone", "sphere", "torus")
 MESH_QUALITY_PRESETS = {"draft": (600.0, 0.5), "normal": (2000.0, 0.25), "fine": (6000.0, 0.12)}
 EDGE_ANGULAR_DEFLECTION_IN_RADIANS = 0.2
 FALLBACK_EDGE_SAMPLE_COUNT = 24
+TRANSFORMATION_FORMS_THAT_KEEP_DIRECTIONS = (gp_TrsfForm.gp_Identity, gp_TrsfForm.gp_Translation)
 _current_mesh_quality = "normal"
 
 
@@ -73,11 +75,35 @@ def describe_edge(edge, edge_id: str) -> dict:
 def _vertex_normals_from_surface(face, triangulation, transformation, node_count: int, is_reversed: bool):
     if not triangulation.HasNormals():
         BRepLib_ToolTriangulatedShape.ComputeNormals_s(face.wrapped, triangulation)
-    normals = np.empty((node_count, 3), np.float64)
-    for node_number in range(1, node_count + 1):
-        normal = triangulation.Normal(node_number).Transformed(transformation)
-        normals[node_number - 1] = (normal.X(), normal.Y(), normal.Z())
+    node_numbers = range(1, node_count + 1)
+    if transformation.Form() in TRANSFORMATION_FORMS_THAT_KEEP_DIRECTIONS:
+        normal_coordinates = [triangulation.Normal(node_number).Coord() for node_number in node_numbers]
+    else:
+        normal_coordinates = [triangulation.Normal(node_number).Transformed(transformation).Coord()
+                              for node_number in node_numbers]
+    normals = np.array(normal_coordinates, np.float64).reshape(-1, 3)
     return -normals if is_reversed else normals
+
+
+def _node_points_in_world_frame(triangulation, transformation, node_count: int) -> np.ndarray:
+    node_numbers = range(1, node_count + 1)
+    transformation_form = transformation.Form()
+    if transformation_form not in TRANSFORMATION_FORMS_THAT_KEEP_DIRECTIONS:
+        return np.array([triangulation.Node(node_number).Transformed(transformation).Coord()
+                         for node_number in node_numbers], np.float64).reshape(-1, 3)
+    local_points = np.array([triangulation.Node(node_number).Coord() for node_number in node_numbers],
+                            np.float64).reshape(-1, 3)
+    if transformation_form == gp_TrsfForm.gp_Identity:
+        return local_points
+    return local_points + np.array(transformation.TranslationPart().Coord(), np.float64)
+
+
+def _triangle_corner_indices(triangulation, is_reversed: bool) -> np.ndarray:
+    one_based_corners = np.array([triangulation.Triangle(triangle_number).Get()
+                                  for triangle_number in range(1, triangulation.NbTriangles() + 1)],
+                                 np.int64).reshape(-1, 3)
+    zero_based_corners = one_based_corners - 1
+    return zero_based_corners[:, [0, 2, 1]] if is_reversed else zero_based_corners
 
 
 def _vertex_normals_from_triangles(points: np.ndarray, triangle_indices: np.ndarray) -> np.ndarray:
@@ -96,15 +122,8 @@ def _triangulate_face(face, is_reversed: bool):
         return None
     transformation = location.Transformation()
     node_count = triangulation.NbNodes()
-    points = np.empty((node_count, 3), np.float64)
-    for node_number in range(1, node_count + 1):
-        point = triangulation.Node(node_number).Transformed(transformation)
-        points[node_number - 1] = (point.X(), point.Y(), point.Z())
-    triangle_indices = np.empty((triangulation.NbTriangles(), 3), np.int64)
-    for triangle_number in range(1, triangulation.NbTriangles() + 1):
-        first, second, third = triangulation.Triangle(triangle_number).Get()
-        corners = (first - 1, third - 1, second - 1) if is_reversed else (first - 1, second - 1, third - 1)
-        triangle_indices[triangle_number - 1] = corners
+    points = _node_points_in_world_frame(triangulation, transformation, node_count)
+    triangle_indices = _triangle_corner_indices(triangulation, is_reversed)
     try:
         normals = _vertex_normals_from_surface(face, triangulation, transformation, node_count, is_reversed)
     except Exception:
