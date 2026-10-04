@@ -13,16 +13,19 @@ cd biscad
 # 1. Public URL from your laptop, no account needed (Cloudflare quick tunnel)
 BISCAD_ADMIN_KEY=bsc_pick_a_secret ./deploy/public.sh
 
-# 2. Free permanent hosting on Hugging Face Spaces (2 vCPU / 16 GB, no card)
+# 2. Autoscaling on Google Cloud Run (scales 0 → 2 instances, $5 budget alert; one gcloud login)
+./deploy/cloudrun.sh <gcp-project-id>
+
+# 3. Free permanent hosting on Hugging Face Spaces (2 vCPU / 16 GB, no card)
 #    token: https://huggingface.co/settings/tokens (write access)
 HF_TOKEN=hf_xxx BISCAD_ADMIN_KEY=bsc_pick_a_secret ./deploy/huggingface.sh <your-hf-username>
 
-# 3. Plain local dev
+# 4. Plain local dev
 pip install -r server/requirements.txt
 cd server && BISCAD_ADMIN_KEY=bsc_pick_a_secret uvicorn app:app --port 8000
 # → http://localhost:8000  (landing)  /studio.html  /docs.html  /api/docs  /mcp
 
-# 4. Docker anywhere (Fly, Railway, a VPS…)
+# 5. Docker anywhere (Fly, Railway, a VPS…)
 docker build -t biscad . && docker run -p 8000:8000 -v biscad:/data biscad
 ```
 
