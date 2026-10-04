@@ -4,12 +4,14 @@ import base64
 import math
 
 import numpy as np
-from build123d import Compound, Shape
+from build123d import Compound, Shape, Vector
 from OCP.BRep import BRep_Tool
 from OCP.BRepAdaptor import BRepAdaptor_Curve
+from OCP.BRepGProp import BRepGProp
 from OCP.BRepLib import BRepLib_ToolTriangulatedShape
 from OCP.BRepMesh import BRepMesh_IncrementalMesh
 from OCP.GCPnts import GCPnts_TangentialDeflection
+from OCP.GProp import GProp_GProps
 from OCP.TopAbs import TopAbs_REVERSED
 from OCP.TopLoc import TopLoc_Location
 from OCP.gp import gp_TrsfForm
@@ -48,10 +50,21 @@ def _properties_until_first_failure(property_getters: dict) -> dict:
     return properties
 
 
+def _surface_properties_of_face(face) -> GProp_GProps:
+    surface_properties = GProp_GProps()
+    BRepGProp.SurfaceProperties_s(face.wrapped, surface_properties)
+    return surface_properties
+
+
+def _center_of_face(face, surface_properties: GProp_GProps) -> Vector:
+    return Vector(surface_properties.CentreOfMass()) if face.is_planar else face.center()
+
+
 def describe_face(face, face_id: str) -> dict:
-    description = {"id": face_id, "type": geometry_type_name(face), "area": round(face.area, 4)}
+    surface_properties = _surface_properties_of_face(face)
+    description = {"id": face_id, "type": geometry_type_name(face), "area": round(surface_properties.Mass(), 4)}
     try:
-        center = face.center()
+        center = _center_of_face(face, surface_properties)
     except Exception:
         return description
     description["center"] = _rounded_floats(center)

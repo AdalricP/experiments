@@ -21,6 +21,7 @@ DEFAULT_PART_COLOR = "#d9d7d2"
 SUPERSAMPLING_FACTOR = 2
 MODEL_FILL_FRACTION_OF_CANVAS = 0.84
 EDGE_COLOR_RGB = (28, 28, 28)
+UNPAINTED_PIXEL_DEPTH = -1e9
 MONOSPACE_FONT_PATHS = ("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
                         "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf")
 AXIS_TRIAD = ((np.array([1, 0, 0.]), (200, 60, 50), "X"), (np.array([0, 1, 0.]), (60, 150, 70), "Y"),
@@ -124,25 +125,37 @@ def _shaded_triangles_of_part(part: dict, mesh, base_color: np.ndarray, highligh
     return projected_triangles[:, :, 2].mean(1), projected_triangles, shaded_colors
 
 
-def _paint_triangles_back_to_front(image, depth_image, shaded_parts: list):
-    color_raster, depth_raster = ImageDraw.Draw(image).draw, ImageDraw.Draw(depth_image).draw
+def _painting_rank_of_each_pixel(canvas_width: int, canvas_height: int,
+                                 flat_polygons_back_to_front: list) -> np.ndarray:
+    rank_image = Image.new("I", (canvas_width, canvas_height), 0)
+    rank_raster = ImageDraw.Draw(rank_image).draw
+    for painting_rank, flat_polygon in enumerate(flat_polygons_back_to_front, start=1):
+        rank_raster.draw_polygon(flat_polygon, painting_rank, 1)
+    return np.asarray(rank_image)
+
+
+def _paint_triangles_back_to_front(canvas_width: int, canvas_height: int, background, shaded_parts: list):
     projected_triangles = np.concatenate([shaded[1] for shaded in shaded_parts])
     triangle_depths = np.concatenate([shaded[0] for shaded in shaded_parts])
     colors = np.concatenate([shaded[2] for shaded in shaded_parts]).astype(int)
     painting_order = np.argsort(triangle_depths)
-    flat_polygons = projected_triangles[painting_order, :, :2].reshape(-1, 6).tolist()
-    ordered_colors = [tuple(color) for color in colors[painting_order].tolist()]
-    for flat_polygon, color, triangle_depth in zip(flat_polygons, ordered_colors, triangle_depths[painting_order].tolist()):
-        color_raster.draw_polygon(flat_polygon, color_raster.draw_ink(color), 1)
-        depth_raster.draw_polygon(flat_polygon, depth_raster.draw_ink(triangle_depth), 1)
+    flat_polygons_back_to_front = projected_triangles[painting_order, :, :2].reshape(-1, 6).tolist()
+    painting_rank_of_pixel = _painting_rank_of_each_pixel(canvas_width, canvas_height, flat_polygons_back_to_front)
+    background_color = np.array(Image.new("RGB", (1, 1), background).getpixel((0, 0)), np.uint8)
+    color_by_painting_rank = np.concatenate([background_color[None], colors[painting_order].astype(np.uint8)])
+    depth_by_painting_rank = np.concatenate([np.array([UNPAINTED_PIXEL_DEPTH], np.float32),
+                                             triangle_depths[painting_order].astype(np.float32)])
+    painted_image = Image.fromarray(color_by_painting_rank[painting_rank_of_pixel])
+    return painted_image, depth_by_painting_rank[painting_rank_of_pixel]
 
 
-def _sample_points_along_segments(segment_starts: np.ndarray, segment_ends: np.ndarray, sample_count: int) -> np.ndarray:
+def _sample_points_along_segments(segment_starts: np.ndarray, segment_ends: np.ndarray,
+                                  sample_count: int) -> np.ndarray:
     interpolation_fractions = np.linspace(0, 1, sample_count + 1)
     return segment_starts[:, None] + (segment_ends - segment_starts)[:, None] * interpolation_fractions[None, :, None]
 
 
-def _visible_runs_of_samples(samples: np.ndarray, is_visible: np.ndarray) -> list:
+def _visible_runs_of_samples(samples: list, is_visible: list) -> list:
     visible_runs, current_run = [], []
     for sample_index in range(len(samples) - 1):
         if is_visible[sample_index] and is_visible[sample_index + 1]:
@@ -159,11 +172,13 @@ def _visible_polylines_of_segments(projected_segments: np.ndarray, depth_buffer,
     canvas_height, canvas_width = depth_buffer.shape
     segment_starts, segment_ends = projected_segments[:, 0], projected_segments[:, 1]
     screen_offsets = (segment_ends[:, :2] - segment_starts[:, :2]).tolist()
-    sample_counts = np.array([max(int(math.hypot(offset_x, offset_y) / 3), 1) for offset_x, offset_y in screen_offsets])
+    sample_counts = np.array([max(int(math.hypot(offset_x, offset_y) / 3), 1)
+                              for offset_x, offset_y in screen_offsets])
     polylines_by_segment_index = {}
     for sample_count in np.unique(sample_counts).tolist():
         segment_indices = np.flatnonzero(sample_counts == sample_count)
-        samples = _sample_points_along_segments(segment_starts[segment_indices], segment_ends[segment_indices], sample_count)
+        samples = _sample_points_along_segments(segment_starts[segment_indices], segment_ends[segment_indices],
+                                                sample_count)
         pixel_columns = np.clip(samples[:, :, 0].astype(int), 0, canvas_width - 1)
         pixel_rows = np.clip(samples[:, :, 1].astype(int), 0, canvas_height - 1)
         is_visible = samples[:, :, 2] >= depth_buffer[pixel_rows, pixel_columns] - depth_tolerance
@@ -238,10 +253,8 @@ def render_version_image(version_directory: str, view="iso", width_in_pixels=800
     shaded_parts = [_shaded_triangles_of_part(part, mesh, _rgb_from_hex_color(
         part_colors[part_index].get("color") if part_index < len(part_colors) else None), highlighted_ids, projection)
         for part_index, part in enumerate(topology["parts"]) if part["id"] not in hidden_part_ids]
-    image = Image.new("RGB", (canvas_width, canvas_height), background)
-    depth_image = Image.new("F", (canvas_width, canvas_height), -1e9)
-    _paint_triangles_back_to_front(image, depth_image, [shaded for shaded in shaded_parts if shaded is not None])
-    depth_buffer = np.asarray(depth_image)
+    image, depth_buffer = _paint_triangles_back_to_front(canvas_width, canvas_height, background,
+                                                         [shaded for shaded in shaded_parts if shaded is not None])
     if edges:
         _draw_visible_edges(image, visible_parts, mesh, projection, depth_buffer, model_span)
     image = image.resize((width_in_pixels, height_in_pixels), Image.LANCZOS)
