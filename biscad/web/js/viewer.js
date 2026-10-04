@@ -4,9 +4,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
-
 THREE.Object3D.DEFAULT_UP.set(0, 0, 1);
-
 const selection_color = 0xb3101f;
 const ember_color = 0xff4a3d;
 const agent_highlight_color = 0x4a8dff;
@@ -28,23 +26,16 @@ const click_movement_tolerance_in_pixels = 5;
 const longest_click_in_milliseconds = 500;
 const auto_rotate_speed = 0.55;
 
-const view_directions = {
-  iso: [1, -1, 0.82],
-  front: [0, -1, 0],
-  back: [0, 1, 0],
-  left: [-1, 0, 0],
-  right: [1, 0, 0],
-  top: [0, -1e-4, 1],
-  bottom: [0, 1e-4, -1],
-};
+const view_directions = { iso: [1, -1, 0.82], front: [0, -1, 0], back: [0, 1, 0], left: [-1, 0, 0], right: [1, 0, 0], top: [0, -1e-4, 1], bottom: [0, 1e-4, -1] };
 const view_names_in_shortcut_order = Object.keys(view_directions);
 const axis_normals = { x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] };
-const render_modes_with_labels = [
-  ['shaded-edges', 'Shaded + edges'],
-  ['shaded', 'Shaded'],
-  ['hidden', 'Hidden line'],
-  ['wireframe', 'Wireframe'],
-  ['xray', 'X-ray'],
+const render_modes_with_labels = [['shaded-edges', 'Shaded + edges'], ['shaded', 'Shaded'], ['hidden', 'Hidden line'], ['wireframe', 'Wireframe'], ['xray', 'X-ray']];
+const keyboard_help_rows = [['F', 'Fit to view'], ['1–7', 'Iso · Front · Back · Left · Right · Top · Bottom'], ['P', 'Perspective / orthographic'], ['S', 'Section plane'], ['M', 'Measure'], ['X', 'Explode assembly'], ['W', 'Cycle render mode'], ['B', 'Bounding box dimensions'], ['Esc', 'Clear selection'], ['?', 'This help']];
+const mouse_help_rows = [['Drag', 'Orbit'], ['Right / middle drag', 'Pan'], ['Wheel', 'Zoom to cursor'], ['Click', 'Select face / edge &nbsp;·&nbsp; Shift adds'], ['Double-click', 'Set orbit pivot &nbsp;·&nbsp; Alt: look normal to face']];
+const help_grid_html = (help_rows) => `<div class="vc-help-grid">${help_rows.map(([help_key, help_action]) => `<kbd>${help_key}</kbd><span>${help_action}</span>`).join('')}</div>`;
+const cube_faces = [
+  ['FRONT', [0, -1, 0], [1, 0, 0], [0, 0, 1]], ['BACK', [0, 1, 0], [-1, 0, 0], [0, 0, 1]], ['RIGHT', [1, 0, 0], [0, 1, 0], [0, 0, 1]],
+  ['LEFT', [-1, 0, 0], [0, -1, 0], [0, 0, 1]], ['TOP', [0, 0, 1], [1, 0, 0], [0, 1, 0]], ['BOTTOM', [0, 0, -1], [1, 0, 0], [0, -1, 0]],
 ];
 
 function decode_base64_to_array_buffer(base64_text) {
@@ -70,7 +61,6 @@ export function format_number(number, decimal_places = 2) {
   return (Math.round(number_without_tiny_noise * 10 ** decimal_places) / 10 ** decimal_places).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: decimal_places });
 }
 export const format_vector = (vector, decimal_places = 2) => (vector ? [0, 1, 2].map((axis_index) => format_number(vector[axis_index], decimal_places)).join(', ') : '—');
-
 function interpolate_direction_on_sphere(start_direction, end_direction, progress_fraction, output_direction) {
   const angle_between_in_radians = Math.acos(THREE.MathUtils.clamp(start_direction.dot(end_direction), -1, 1));
   if (angle_between_in_radians < 1e-4) return output_direction.copy(start_direction).lerp(end_direction, progress_fraction).normalize();
@@ -83,7 +73,6 @@ function interpolate_direction_on_sphere(start_direction, end_direction, progres
   const sine_of_angle = Math.sin(angle_between_in_radians);
   return output_direction.copy(start_direction).multiplyScalar(Math.sin((1 - progress_fraction) * angle_between_in_radians) / sine_of_angle).addScaledVector(end_direction, Math.sin(progress_fraction * angle_between_in_radians) / sine_of_angle).normalize();
 }
-
 function avoid_exactly_vertical_direction(direction) {
   if (Math.abs(direction.z) <= 0.9999) return direction;
   return direction.set(0, direction.z > 0 ? -1e-4 : 1e-4, Math.sign(direction.z)).normalize();
@@ -95,19 +84,16 @@ function create_element(tag_name, class_name, inner_html) {
   if (inner_html != null) element.innerHTML = inner_html;
   return element;
 }
-
 function create_square_canvas(size_in_pixels) {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = size_in_pixels;
   return canvas;
 }
-
 function create_srgb_canvas_texture(canvas) {
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
 }
-
 function draw_radial_gradient_canvas(size_in_pixels, gradient_circles_as_fractions_of_size, color_stops) {
   const canvas = create_square_canvas(size_in_pixels);
   const context = canvas.getContext('2d');
@@ -117,7 +103,6 @@ function draw_radial_gradient_canvas(size_in_pixels, gradient_circles_as_fractio
   context.fillRect(0, 0, size_in_pixels, size_in_pixels);
   return canvas;
 }
-
 function add_dither_noise_against_banding(canvas) {
   const context = canvas.getContext('2d');
   const image = context.getImageData(0, 0, canvas.width, canvas.height);
@@ -130,7 +115,6 @@ function add_dither_noise_against_banding(canvas) {
   context.putImageData(image, 0, 0);
   return canvas;
 }
-
 const draw_viewport_background_texture = () => create_srgb_canvas_texture(add_dither_noise_against_banding(draw_radial_gradient_canvas(512, [0.5, 0.42, 0, 0.5, 0.5, 0.75], [[0, '#363031'], [0.55, '#221d1e'], [1, '#0f0a0b']])));
 const draw_floor_glow_texture = () => create_srgb_canvas_texture(draw_radial_gradient_canvas(256, [0.5, 0.5, 0, 0.5, 0.5, 0.5], [[0, 'rgba(255, 226, 218, 0.55)'], [0.45, 'rgba(255, 190, 180, 0.18)'], [1, 'rgba(255, 190, 180, 0)']]));
 
@@ -145,7 +129,6 @@ function draw_cube_face_label(canvas, face_label) {
   if ('letterSpacing' in context) context.letterSpacing = '4px';
   context.fillText(face_label, 128, 132);
 }
-
 function create_cube_face_label_texture(face_label) {
   const canvas = create_square_canvas(256);
   draw_cube_face_label(canvas, face_label);
@@ -153,7 +136,6 @@ function create_cube_face_label_texture(face_label) {
   texture.anisotropy = 4;
   return texture;
 }
-
 function create_axis_letter_texture(axis_letter, axis_color) {
   const canvas = create_square_canvas(64);
   const context = canvas.getContext('2d');
@@ -170,13 +152,11 @@ function edge_polyline_points(edge) {
   if ((!sampled_points || sampled_points.length < 6) && edge.start && edge.end) return new Float32Array([...edge.start, ...edge.end]);
   return sampled_points;
 }
-
 function flatten_polyline_into_segments(polyline_points) {
   const segment_coordinates = [];
   for (let coordinate_index = 0; polyline_points && coordinate_index + 5 < polyline_points.length; coordinate_index += 3) segment_coordinates.push(...polyline_points.subarray(coordinate_index, coordinate_index + 6));
   return segment_coordinates;
 }
-
 function compute_signed_mesh_volume(positions, triangle_indices) {
   const first_corner = new THREE.Vector3(), second_corner = new THREE.Vector3(), third_corner = new THREE.Vector3();
   let signed_volume = 0;
@@ -188,7 +168,6 @@ function compute_signed_mesh_volume(positions, triangle_indices) {
   }
   return signed_volume;
 }
-
 function find_nearest_triangle_hit(ray, geometry, first_triangle_index, triangle_count) {
   const positions = geometry.attributes.position.array, triangle_indices = geometry.index.array;
   const first_corner = new THREE.Vector3(), second_corner = new THREE.Vector3(), third_corner = new THREE.Vector3(), hit_point = new THREE.Vector3();
@@ -209,13 +188,11 @@ function entity_center_point(entity) {
   if (entity.kind === 'edge' && entity.start && entity.end) return vector_from_array(entity.start).lerp(vector_from_array(entity.end), 0.5);
   return null;
 }
-
 function describe_entity_size(entity) {
   if (entity.kind === 'part') return entity.name;
   if (entity.radius) return `r ${format_number(entity.radius)}`;
   return entity.kind === 'face' ? `${format_number(entity.area)} mm²` : `${format_number(entity.length)} mm`;
 }
-
 function describe_part_entity(part) {
   return {
     id: part.id, kind: 'part', part_index: part.index, name: part.name, color: part.color,
@@ -232,7 +209,6 @@ function apply_render_mode_to_part(part, render_mode, depth_only_material) {
   part.line_material.depthTest = render_mode !== 'wireframe';
   part.line_material.opacity = render_mode === 'xray' ? 0.55 : (part.line_material.color.r > 0.1 ? 0.7 : 0.78);
 }
-
 function create_section_cap_material(part_color, is_dark_part, clip_planes) {
   const cap_material = new THREE.MeshBasicMaterial({ color: part_color.clone().multiplyScalar(is_dark_part ? 1.6 : 0.78), side: THREE.BackSide, clippingPlanes: clip_planes, toneMapped: false });
   cap_material.onBeforeCompile = (shader) => {
@@ -243,7 +219,6 @@ function create_section_cap_material(part_color, is_dark_part, clip_planes) {
   };
   return cap_material;
 }
-
 function create_shadow_depth_material(shadow_layer, clip_planes) {
   const depth_material = new THREE.MeshDepthMaterial({ side: THREE.DoubleSide });
   Object.assign(depth_material, { clippingPlanes: clip_planes, depthTest: false, depthWrite: false });
@@ -320,6 +295,7 @@ void main() {
   gl_FragColor = vec4(line_color, line_alpha);
 }`;
 
+const gaussian_blur_taps = [[-4, 0.051], [-3, 0.0918], [-2, 0.12245], [-1, 0.1531], [0, 0.1633], [1, 0.1531], [2, 0.12245], [3, 0.0918], [4, 0.051]];
 const blur_vertex_shader = `
 varying vec2 texture_coordinate;
 void main() { texture_coordinate = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
@@ -329,15 +305,7 @@ uniform vec2 blur_direction;
 varying vec2 texture_coordinate;
 void main() {
   vec4 blurred_color = vec4(0.0);
-  blurred_color += texture2D(source_texture, texture_coordinate - 4.0 * blur_direction) * 0.051;
-  blurred_color += texture2D(source_texture, texture_coordinate - 3.0 * blur_direction) * 0.0918;
-  blurred_color += texture2D(source_texture, texture_coordinate - 2.0 * blur_direction) * 0.12245;
-  blurred_color += texture2D(source_texture, texture_coordinate - 1.0 * blur_direction) * 0.1531;
-  blurred_color += texture2D(source_texture, texture_coordinate) * 0.1633;
-  blurred_color += texture2D(source_texture, texture_coordinate + 1.0 * blur_direction) * 0.1531;
-  blurred_color += texture2D(source_texture, texture_coordinate + 2.0 * blur_direction) * 0.12245;
-  blurred_color += texture2D(source_texture, texture_coordinate + 3.0 * blur_direction) * 0.0918;
-  blurred_color += texture2D(source_texture, texture_coordinate + 4.0 * blur_direction) * 0.051;
+  ${gaussian_blur_taps.map(([tap_offset, tap_weight]) => `blurred_color += texture2D(source_texture, texture_coordinate + ${tap_offset.toFixed(1)} * blur_direction) * ${tap_weight};`).join('\n  ')}
   gl_FragColor = blurred_color;
 }`;
 
@@ -532,14 +500,6 @@ export class Viewer extends EventTarget {
     view_cube.camera = new THREE.OrthographicCamera(-2.05, 2.05, 2.05, -2.05, 0.1, 20);
     view_cube.scene.add(view_cube.group);
     const edge_material_by_region_key = new Map();
-    const cube_faces = [
-      ['FRONT', [0, -1, 0], [1, 0, 0], [0, 0, 1]],
-      ['BACK', [0, 1, 0], [-1, 0, 0], [0, 0, 1]],
-      ['RIGHT', [1, 0, 0], [0, 1, 0], [0, 0, 1]],
-      ['LEFT', [-1, 0, 0], [0, -1, 0], [0, 0, 1]],
-      ['TOP', [0, 0, 1], [1, 0, 0], [0, 1, 0]],
-      ['BOTTOM', [0, 0, -1], [1, 0, 0], [0, -1, 0]],
-    ];
     for (const [face_label, ...face_frame] of cube_faces) {
       for (const region_steps of cube_region_steps) view_cube.regions.push(this.create_view_cube_region(face_label, face_frame.map(vector_from_array), region_steps, edge_material_by_region_key));
     }
@@ -593,30 +553,8 @@ export class Viewer extends EventTarget {
     this.overlay_element = create_element('div', 'vc-overlay');
     this.overlay_element.append(this.label_layer, this.tooltip_element, this.toast_element);
     this.container_element.appendChild(this.overlay_element);
-    this.help_element = create_element('div', 'vc-help', `
-      <div class="vc-help-card">
-        <div class="vc-help-head"><span>Keyboard</span><button class="vc-x" aria-label="Close">×</button></div>
-        <div class="vc-help-grid">
-          <kbd>F</kbd><span>Fit to view</span>
-          <kbd>1–7</kbd><span>Iso · Front · Back · Left · Right · Top · Bottom</span>
-          <kbd>P</kbd><span>Perspective / orthographic</span>
-          <kbd>S</kbd><span>Section plane</span>
-          <kbd>M</kbd><span>Measure</span>
-          <kbd>X</kbd><span>Explode assembly</span>
-          <kbd>W</kbd><span>Cycle render mode</span>
-          <kbd>B</kbd><span>Bounding box dimensions</span>
-          <kbd>Esc</kbd><span>Clear selection</span>
-          <kbd>?</kbd><span>This help</span>
-        </div>
-        <div class="vc-help-head" style="margin-top:18px"><span>Mouse</span></div>
-        <div class="vc-help-grid">
-          <kbd>Drag</kbd><span>Orbit</span>
-          <kbd>Right / middle drag</kbd><span>Pan</span>
-          <kbd>Wheel</kbd><span>Zoom to cursor</span>
-          <kbd>Click</kbd><span>Select face / edge &nbsp;·&nbsp; Shift adds</span>
-          <kbd>Double-click</kbd><span>Set orbit pivot &nbsp;·&nbsp; Alt: look normal to face</span>
-        </div>
-      </div>`);
+    const help_card_html = `<div class="vc-help-head"><span>Keyboard</span><button class="vc-x" aria-label="Close">×</button></div>${help_grid_html(keyboard_help_rows)}<div class="vc-help-head" style="margin-top:18px"><span>Mouse</span></div>${help_grid_html(mouse_help_rows)}`;
+    this.help_element = create_element('div', 'vc-help', `<div class="vc-help-card">${help_card_html}</div>`);
     this.help_element.addEventListener('click', (click_event) => { if (click_event.target === this.help_element || click_event.target.closest('.vc-x')) this.toggle_help(false); });
     this.container_element.appendChild(this.help_element);
   }
@@ -1008,9 +946,7 @@ export class Viewer extends EventTarget {
     this.needs_render = true;
   }
 
-  camera_offset_from_target() {
-    return new THREE.Vector3().subVectors(this.camera.position, this.controls.target);
-  }
+  camera_offset_from_target() { return new THREE.Vector3().subVectors(this.camera.position, this.controls.target); }
 
   visible_box() {
     const union_box = this.parts.filter((part) => part.visible).reduce((box, part) => box.union(part.bounding_box.clone().translate(part.explode_offset)), new THREE.Box3());
@@ -1092,9 +1028,7 @@ export class Viewer extends EventTarget {
     if (progress_fraction >= 1) this.camera_flight = null;
   }
 
-  toggle_projection() {
-    this.set_projection(this.state.projection === 'perspective' ? 'orthographic' : 'perspective');
-  }
+  toggle_projection() { this.set_projection(this.state.projection === 'perspective' ? 'orthographic' : 'perspective'); }
 
   set_projection(projection_mode) {
     if (projection_mode === this.state.projection) return;
@@ -1196,9 +1130,7 @@ export class Viewer extends EventTarget {
     this.tooltip_element.style.transform = `translate(${tooltip_left_in_pixels}px, ${canvas_y_in_pixels + 18}px)`;
   }
 
-  hide_tooltip() {
-    this.tooltip_element.classList.remove('on');
-  }
+  hide_tooltip() { this.tooltip_element.classList.remove('on'); }
 
   handle_click(pointer_event) {
     const [canvas_x_in_pixels, canvas_y_in_pixels] = this.canvas_position_of(pointer_event);
@@ -1263,9 +1195,7 @@ export class Viewer extends EventTarget {
     this.emit_selection_change();
   }
 
-  emit_selection_change() {
-    this.dispatchEvent(new CustomEvent('selectionchange', { detail: { ids: this.selection.slice() } }));
-  }
+  emit_selection_change() { this.dispatchEvent(new CustomEvent('selectionchange', { detail: { ids: this.selection.slice() } })); }
 
   clear_selection() {
     if (!this.selection.length && !this.measure_picks.length) return;
@@ -1375,9 +1305,7 @@ export class Viewer extends EventTarget {
     this.emit_state_change();
   }
 
-  toggle_measure_tool() {
-    this.set_tool(this.state.tool === 'measure' ? 'select' : 'measure');
-  }
+  toggle_measure_tool() { this.set_tool(this.state.tool === 'measure' ? 'select' : 'measure'); }
 
   set_tool(tool_name) {
     if (tool_name === this.state.tool) return;
@@ -1432,9 +1360,7 @@ export class Viewer extends EventTarget {
     });
   }
 
-  is_camera_on_negative_side_of(direction) {
-    return this.camera_offset_from_target().dot(direction) < 0;
-  }
+  is_camera_on_negative_side_of(direction) { return this.camera_offset_from_target().dot(direction) < 0; }
 
   set_section(section_changes = {}) {
     const section = this.state.section;
@@ -1514,9 +1440,7 @@ export class Viewer extends EventTarget {
     this.emit_state_change();
   }
 
-  animate_explode(target_fraction) {
-    this.explode_animation = { start_time_in_milliseconds: performance.now(), start_fraction: this.state.explode_fraction, target_fraction };
-  }
+  animate_explode(target_fraction) { this.explode_animation = { start_time_in_milliseconds: performance.now(), start_fraction: this.state.explode_fraction, target_fraction }; }
 
   step_explode_animation(now_in_milliseconds) {
     const { start_time_in_milliseconds, start_fraction, target_fraction } = this.explode_animation;
@@ -1618,9 +1542,7 @@ export class Viewer extends EventTarget {
     this.emit_measure_event(this.measure_picks.slice(), null);
   }
 
-  emit_measure_event(measure_picks, measurement) {
-    this.dispatchEvent(new CustomEvent('measure', { detail: { measure_picks, measurement } }));
-  }
+  emit_measure_event(measure_picks, measurement) { this.dispatchEvent(new CustomEvent('measure', { detail: { measure_picks, measurement } })); }
 
   reset_measurement() {
     this.measure_picks = [];
@@ -1773,7 +1695,6 @@ function layout_shadow_layer(shadow_layer, { visible_center, visible_size, visib
 }
 
 const angle_between_in_degrees = (first_direction, second_direction, lowest_cosine) => THREE.MathUtils.radToDeg(Math.acos(THREE.MathUtils.clamp(Math.abs(first_direction.dot(second_direction)), lowest_cosine, 1)));
-
 function measure_between_geometries(first, second) {
   const center_to_center = { first_point: first.point.clone(), second_point: second.point.clone(), distance_in_millimeters: first.point.distanceTo(second.point), angle_in_degrees: null, kind: 'center-to-center' };
   if (first.normal && second.normal) return measure_between_planes(first, second, center_to_center);
@@ -1782,19 +1703,16 @@ function measure_between_geometries(first, second) {
   if (first.axis && second.axis && Math.abs(first.axis.dot(second.axis)) > 0.9999) return measure_between_parallel_axes(first, second, center_to_center);
   return center_to_center;
 }
-
 function measure_between_planes(first, second, center_to_center) {
   const angle_in_degrees = angle_between_in_degrees(first.normal, second.normal, -1);
   if (angle_in_degrees >= 0.05) return { ...center_to_center, angle_in_degrees };
   const signed_gap = second.point.clone().sub(first.point).dot(first.normal);
   return { ...center_to_center, second_point: center_to_center.first_point.clone().addScaledVector(first.normal, signed_gap), distance_in_millimeters: Math.abs(signed_gap), angle_in_degrees: 0, kind: 'parallel planes' };
 }
-
 function measure_between_lines(first, second) {
   const [first_point, second_point] = closest_points_between_segments(first.start_point, first.end_point, second.start_point, second.end_point);
   return { first_point, second_point, distance_in_millimeters: first_point.distanceTo(second_point), angle_in_degrees: angle_between_in_degrees(first.direction, second.direction, 0), kind: 'minimum' };
 }
-
 function measure_between_edge_and_plane(first, second, center_to_center) {
   const plane = first.normal ? first : second, edge = first.normal ? second : first;
   const signed_gap = edge.point.clone().sub(plane.point).dot(plane.normal);
@@ -1804,7 +1722,6 @@ function measure_between_edge_and_plane(first, second, center_to_center) {
   const [first_point, second_point] = plane === first ? [point_on_plane, point_on_edge] : [point_on_edge, point_on_plane];
   return { first_point, second_point, distance_in_millimeters: Math.abs(signed_gap), angle_in_degrees, kind: 'to plane' };
 }
-
 function measure_between_parallel_axes(first, second, center_to_center) {
   const center_offset = second.point.clone().sub(first.point);
   const perpendicular_offset = center_offset.clone().addScaledVector(first.axis, -center_offset.dot(first.axis));
@@ -1816,7 +1733,6 @@ function closest_points_between_segments(first_start, first_end, second_start, s
   const [first_parameter, second_parameter] = closest_segment_parameters(first_direction, second_direction, first_start.clone().sub(second_start));
   return [first_start.clone().addScaledVector(first_direction, first_parameter), second_start.clone().addScaledVector(second_direction, second_parameter)];
 }
-
 function closest_segment_parameters(first_direction, second_direction, start_offset) {
   const clamp_to_unit = (parameter) => THREE.MathUtils.clamp(parameter, 0, 1);
   const first_length_squared = first_direction.dot(first_direction), second_length_squared = second_direction.dot(second_direction);
@@ -1884,7 +1800,6 @@ const operation_icon_patterns = [
   [/loft|sweep/, 'operation_loft'], [/box|cylinder|sphere|cone|torus|primitive|wedge/, 'operation_primitive'],
 ];
 const icon_for_operation = (operation_name = '') => icons[operation_icon_patterns.find(([operation_pattern]) => operation_pattern.test(String(operation_name).toLowerCase()))?.[1] || 'operation_step'];
-
 const overlay_toggles = {
   grid: { label: 'Grid', is_on: (state) => state.show_grid, toggle: (viewer) => viewer.set_grid_visible(!viewer.state.show_grid) },
   shadow: { label: 'Ground shadow', is_on: (state) => state.show_shadow, toggle: (viewer) => viewer.set_shadow_visible(!viewer.state.show_shadow) },
@@ -1893,7 +1808,6 @@ const overlay_toggles = {
 
 const close_toolbar_popovers = (toolbar) => toolbar.popovers.forEach((popover_element) => popover_element.classList.remove('on'));
 const set_range_unless_focused = (range_input, range_position) => { if (document.activeElement !== range_input) range_input.value = range_position; };
-
 function create_toolbar_button(toolbar, button_key, icon_markup, tooltip_text, handle_click = () => {}) {
   const toolbar_button = create_element('button', 'vc-tb', icon_markup);
   Object.assign(toolbar_button.dataset, { tip: tooltip_text, key: button_key });
@@ -1902,7 +1816,6 @@ function create_toolbar_button(toolbar, button_key, icon_markup, tooltip_text, h
   toolbar.buttons[button_key] = toolbar_button;
   return toolbar_button;
 }
-
 function wrap_with_popover(toolbar, toolbar_button, popover_element) {
   const popover_wrapper = create_element('div', 'vc-tbw');
   popover_element.classList.add('vc-pop');
@@ -1923,7 +1836,6 @@ function choose_section_axis(viewer, axis_choice) {
   if (!planar_face_id) return viewer.flash('Select a planar face first');
   viewer.set_section({ face: planar_face_id });
 }
-
 function build_section_tool(toolbar) {
   const viewer = toolbar.viewer;
   const section_popover = create_element('div', '', `
@@ -1937,13 +1849,11 @@ function build_section_tool(toolbar) {
   section_popover.querySelector('[data-k=flip]').addEventListener('click', () => viewer.set_section({ is_flipped: !viewer.state.section.is_flipped }));
   return wrap_with_popover(toolbar, create_toolbar_button(toolbar, 'section', icons.section, 'Section plane · S'), section_popover);
 }
-
 function build_explode_tool(toolbar) {
   const explode_popover = create_element('div', '', `<div class="vc-pop-h"><span>Explode</span><span class="vc-mono" data-k="val">0%</span></div><input type="range" min="0" max="1" step="0.005" data-k="t">`);
   explode_popover.querySelector('[data-k=t]').addEventListener('input', (input_event) => toolbar.viewer.set_explode(+input_event.target.value));
   return wrap_with_popover(toolbar, create_toolbar_button(toolbar, 'explode', icons.explode, 'Explode · X'), explode_popover);
 }
-
 function build_views_menu(toolbar) {
   const views_menu = create_element('div', 'vc-menu');
   view_names_in_shortcut_order.forEach((view_name, view_index) => {
@@ -1953,7 +1863,6 @@ function build_views_menu(toolbar) {
   });
   return wrap_with_popover(toolbar, create_toolbar_button(toolbar, 'views', icons.cube, 'Standard views · 1–7'), views_menu);
 }
-
 function build_shading_group(toolbar) {
   const shading_group = create_element('div', 'vc-shading');
   for (const [render_mode, render_mode_label] of render_modes_with_labels) {
@@ -1963,7 +1872,6 @@ function build_shading_group(toolbar) {
   }
   return shading_group;
 }
-
 function build_overlays_menu(toolbar) {
   const overlays_menu = create_element('div', 'vc-menu', '<div class="vc-pop-h"><span>Overlays</span></div>');
   for (const [toggle_key, overlay_toggle] of Object.entries(overlay_toggles)) {
@@ -1999,7 +1907,6 @@ function sync_section_popover(section_popover, viewer) {
   const axis_name = section.axis === 'custom' ? 'd' : section.axis.toUpperCase();
   section_popover.querySelector('[data-k=val]').textContent = section.is_enabled && viewer.section_offset_in_millimeters != null ? `${axis_name} = ${format_number(viewer.section_offset_in_millimeters)} mm` : 'off';
 }
-
 function sync_toolbar_with_state(toolbar, toolbar_element) {
   const { buttons, popover_by_key, viewer } = toolbar, state = viewer.state;
   buttons.select?.classList.toggle('on', state.tool === 'select');
@@ -2079,19 +1986,16 @@ export async function copy_text_to_clipboard(text_to_copy) {
 
 const definition_rows_html = (label_text_pairs) => label_text_pairs.filter(([, row_text]) => row_text != null && row_text !== '—').map(([row_label, row_text]) => `<dt>${row_label}</dt><dd>${row_text}</dd>`).join('');
 const format_millimeters = (length_in_millimeters) => (length_in_millimeters != null ? format_number(length_in_millimeters, 3) + ' mm' : null);
-
 function describe_entity_properties(entity) {
   if (entity.kind === 'face') return [['Type', entity.type], ['Area', format_number(entity.area, 3) + ' mm²'], ['Radius', format_millimeters(entity.radius)], ['Diameter', entity.radius != null ? '⌀ ' + format_number(entity.radius * 2, 3) : null], ['Normal', entity.normal ? format_vector(entity.normal, 3) : null], ['Axis', entity.axis ? format_vector(entity.axis, 3) : null], ['Center', format_vector(entity.center)], ['Part', entity.part_name]];
   if (entity.kind === 'edge') return [['Type', entity.type], ['Length', format_number(entity.length, 3) + ' mm'], ['Radius', format_millimeters(entity.radius)], ['Center', entity.center ? format_vector(entity.center) : null], ['Start', format_vector(entity.start)], ['End', format_vector(entity.end)], ['Part', entity.part_name]];
   return [['Name', entity.name], ['Faces', entity.face_count], ['Edges', entity.edge_count], ['Triangles', entity.triangle_count.toLocaleString()], ['Size', format_vector(entity.bounding_box.size)], ['Area', format_number(entity.area_in_square_millimeters, 1) + ' mm²'], ['Volume', format_number(entity.volume_in_cubic_millimeters / 1000, 3) + ' cm³']];
 }
-
 function describe_measurement_html(measurement) {
   const measurement_rows = [['Kind', measurement.kind], ['Angle', measurement.angle_in_degrees != null ? format_number(measurement.angle_in_degrees, 2) + '°' : null], ['ΔX ΔY ΔZ', format_vector(measurement.delta)], ['Source', measurement.source === 'kernel' ? 'kernel (exact)' : 'viewer']];
   return `<div class="vc-measure"><div class="vc-measure-v">${format_number(measurement.distance_in_millimeters, 3)}<small>mm</small></div>
         <dl>${definition_rows_html(measurement_rows)}</dl></div>`;
 }
-
 function describe_multi_selection_html(selected_ids, selected_entities) {
   const faces = selected_entities.filter((entity) => entity?.kind === 'face'), edges = selected_entities.filter((entity) => entity?.kind === 'edge');
   const total_area = faces.reduce((area_sum, face) => area_sum + (face.area || 0), 0), total_length = edges.reduce((length_sum, edge) => length_sum + (edge.length || 0), 0);
@@ -2128,7 +2032,6 @@ export class SelectionPanel {
     this.panel_element.querySelector('[data-a=section]')?.addEventListener('click', () => viewer.set_section({ face: selected_ids[0] }));
   }
 }
-
 async function copy_reference_with_feedback(reference_text, button_label) {
   await copy_text_to_clipboard(reference_text);
   button_label.textContent = 'Copied ' + reference_text.slice(0, 28) + (reference_text.length > 28 ? '…' : '');
@@ -2235,9 +2138,7 @@ export class StepsBar {
     this.stop();
   }
 
-  stop() {
-    this.set_playing(false);
-  }
+  stop() { this.set_playing(false); }
 
   set_playing(is_playing) {
     this.is_playing = is_playing;

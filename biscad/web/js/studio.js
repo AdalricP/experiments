@@ -711,9 +711,7 @@ function report_agent_failure(ask_error) {
   if (ask_error.response_body?.rounds) render_agent_rounds(ask_error.response_body.rounds);
   log_message('Ask failed: ' + failure_message, 'e');
 }
-function set_ask_status(status_text, css_class = '') {
-  Object.assign(select_element('#askStatus'), { textContent: status_text, className: 'ask-status ' + css_class, title: status_text });
-}
+function set_ask_status(status_text, css_class = '') { Object.assign(select_element('#askStatus'), { textContent: status_text, className: 'ask-status ' + css_class, title: status_text }); }
 function render_agent_rounds(agent_rounds) {
   const rounds_element = select_element('#rounds');
   rounds_element.hidden = !agent_rounds.length;
