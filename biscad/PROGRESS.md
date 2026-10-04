@@ -28,6 +28,7 @@ Earlier phase (backend, MCP, viewer, studio, tests) is done; see git history.
 - [x] server: .construction style + fewer LOC, behaviour identical (agent)
 - [x] docs/HANDBOOK.md technical handbook (12k words, 9 figures)
 - [x] handbook PDF: docs/BISCAD-handbook.pdf (36 pages); Google Doc skipped (offer to user)
-- [ ] JS style/LOC pass after redesigns land
+- [x] JS style/LOC pass (-208 LOC, flow test clean); kernel perf (renders 1.5-2.7x faster, outputs identical)
 - [x] final integration check (41 tests, studio flow vs live server, no errors), preview artifact https://claude.ai/artifact/PxrByvS6GQ6Z8tCTfvd4pu, pinged user
-- [ ] keep improving: JS .construction style + fewer LOC (viewer.js/studio.js/site.js), perf (vectorize tessellate node loops), persistent naming
+- [ ] next: persistent face naming via OCCT history (handbook §4), sketch + constraint solver, assembly mates, shell scripts/CSS to .construction style
+Project size: ~11.1k lines (excl. vendor).
