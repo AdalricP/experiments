@@ -702,7 +702,7 @@ export class Viewer extends EventTarget {
     group.add(mesh, cap, ...(edge_lines.lines ? [edge_lines.lines] : []), overlays);
     return {
       id: scene_part.id || `p${part_index}`, name: scene_part.name || `part ${part_index}`, color: scene_part.color || default_part_color, index: part_index, visible: true,
-      faces, edges, face_by_id: new Map(faces.map((face) => [face.id, face])), edge_by_id: new Map(edges.map((edge) => [edge.id, edge])),
+      faces, edges, face_by_id: new Map(faces.flatMap((face) => [[face.id, face], [face.persistent_id, face]])), edge_by_id: new Map(edges.map((edge) => [edge.id, edge])),
       ...edge_lines, geometry, mesh, cap, solid_material, xray_material, cap_material, group, overlays,
       triangle_count: triangle_indices.length / 3, bounding_box: geometry.boundingBox.clone(), explode_offset: new THREE.Vector3(),
       area_in_square_millimeters: faces.reduce((total_area, face) => total_area + (face.area || 0), 0), volume_in_cubic_millimeters: Math.abs(compute_signed_mesh_volume(positions, triangle_indices)),
@@ -1182,7 +1182,7 @@ export class Viewer extends EventTarget {
     const part = this.parts.find((candidate_part) => candidate_part.id === part_id);
     if (!part) return null;
     if (!sub_entity_key) return describe_part_entity(part);
-    const is_face = sub_entity_key[0] === 'f';
+    const is_face = sub_entity_key[0] === 'f' || sub_entity_key[0] === '#';
     const scene_entity = (is_face ? part.face_by_id : part.edge_by_id).get(entity_id);
     if (!scene_entity) return null;
     const { points, ...entity_fields } = scene_entity;

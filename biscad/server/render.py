@@ -9,6 +9,8 @@ from typing import NamedTuple
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
+from persistent_naming import index_reference_for
+
 VIEW_DIRECTIONS = {
     "iso": (1.0, -1.0, 0.8), "iso2": (-1.0, -1.0, 0.8), "iso_back": (-1.0, 1.0, 0.8),
     "iso_below": (1.0, -1.0, -0.8),
@@ -243,7 +245,8 @@ def render_version_image(version_directory: str, view="iso", width_in_pixels=800
     topology = _load_json(os.path.join(version_directory, "topology.json"))
     mesh = np.load(os.path.join(version_directory, "mesh.npz"))
     part_colors = _load_json(os.path.join(version_directory, "parts.json"))
-    hidden_part_ids, highlighted_ids = set(hidden or ()), set(highlight or ())
+    hidden_part_ids = set(hidden or ())
+    highlighted_ids = {index_reference_for(reference, topology) for reference in highlight or ()}
     canvas_width, canvas_height = width_in_pixels * SUPERSAMPLING_FACTOR, height_in_pixels * SUPERSAMPLING_FACTOR
     projection, model_span = _fit_projection(view, framing_directory or version_directory, hidden_part_ids,
                                              canvas_width, canvas_height)

@@ -122,8 +122,9 @@ curl -s <span class="s">"<span class="host">https://api.biscad.dev</span>/v1/ver
             <li><code>p0</code>: the first part (assemblies have <code>p0</code>, <code>p1</code>, …).</li>
             <li><code>p0/f3</code>: face 3 of part 0.</li>
             <li><code>p0/e7</code>: edge 7 of part 0.</li>
+            <li><code>p0/#1a2b3c4d</code>: the persistent id of a face. Topology and scene faces show it as <code>persistent_id</code>.</li>
           </ul>
-          <p>Numbers follow build123d's <code>shape.faces()</code> and <code>shape.edges()</code> order, so a script can say <code>part.faces()[3]</code> for the face the viewer calls <code>p0/f3</code>. Ids are stable for a given version; after an edit, use <a href="#ref-analysis">diff</a> or the topology descriptors (type, area, centre, normal) to re-find a face.</p>
+          <p>Numbers follow build123d's <code>shape.faces()</code> and <code>shape.edges()</code> order, so a script can say <code>part.faces()[3]</code> for the face the viewer calls <code>p0/f3</code>. Index ids are stable for a given version. An added feature can change them. The persistent id comes from the build history of the face, so it stays the same after parameter changes and added features. Use it wherever a face id is accepted to keep a reference across edits.</p>
         </div>
 
         <h3 id="scene">Scene format v1</h3>

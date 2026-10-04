@@ -15,6 +15,7 @@ from OCP.gp import gp_Dir, gp_Lin, gp_Pnt
 from OCP.GProp import GProp_GProps
 
 from kernel import is_shape_valid, load_parts_from_version_directory
+from persistent_naming import index_reference_for, is_persistent_reference
 from tessellate import describe_edge, describe_face
 
 EXPORT_FORMATS = {
@@ -166,7 +167,7 @@ def _resolve_reference(parts: list, reference: str):
         entity_lists = {"f": part_shape.faces, "e": part_shape.edges, "v": part_shape.vertices}
         return entity_lists[sub_entity[0]]()[int(sub_entity[1:])]
     except Exception:
-        raise ValueError(f"unknown reference '{reference}' (expected like p0/f3, p0/e7, p0/v1 or p0)")
+        raise ValueError(f"unknown reference '{reference}' (expected like p0/f3, p0/#1a2b3c4d, p0/e7, p0/v1 or p0)")
 
 
 def _rounded_point(point, decimal_places: int) -> list[float]:
@@ -192,8 +193,18 @@ def _angle_measurements(first_entity, second_entity) -> dict:
             "perpendicular": abs(cosine) < 1e-6}
 
 
+def _index_references_of_version(version_directory: str, references: list) -> list:
+    if not any(is_persistent_reference(reference) for reference in references if reference):
+        return references
+    with open(os.path.join(version_directory, "topology.json")) as topology_file:
+        topology = json.load(topology_file)
+    return [index_reference_for(reference, topology) if reference else reference for reference in references]
+
+
 def measure_references(version_directory: str, first_reference: str, second_reference: str | None = None) -> dict:
     parts = load_parts_from_version_directory(version_directory)
+    first_reference, second_reference = _index_references_of_version(version_directory,
+                                                                      [first_reference, second_reference])
     first_entity = _resolve_reference(parts, first_reference)
     measurements = {"a": _describe_entity(first_entity, first_reference)}
     if not second_reference:

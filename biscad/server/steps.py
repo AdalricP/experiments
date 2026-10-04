@@ -5,6 +5,8 @@ import sys
 
 from build123d import BuildPart, Mode, Shape, build_common
 
+from persistent_naming import remembered_entries_for_tokens, tokens_after_operation
+
 OPERATION_VERBS = {
     "extrude": "Extrude", "revolve": "Revolve", "loft": "Loft", "sweep": "Sweep",
     "fillet": "Fillet", "chamfer": "Chamfer", "offset": "Shell", "mirror": "Mirror",
@@ -100,6 +102,9 @@ def _without_through_hole_depth(arguments: dict, operation: str, part) -> dict:
 class StepRecorder:
     def __init__(self):
         self.steps = []
+        self.lineage_token_by_face = {}
+        self._builders_in_order = []
+        self._operation_counts_by_lineage_prefix = {}
         self._original_add_to_context = None
 
     def install(self):
@@ -110,9 +115,7 @@ class StepRecorder:
         def add_to_context_and_record_step(builder, *objects, **keyword_arguments):
             part_before = builder._obj if isinstance(builder, BuildPart) else None
             add_outcome = original_add_to_context(builder, *objects, **keyword_arguments)
-            with contextlib.suppress(Exception):
-                recorder._record_if_part_changed(builder, part_before, keyword_arguments.get("mode", Mode.ADD),
-                                                 sys._getframe(1))
+            recorder._observe_operation(builder, part_before, keyword_arguments.get("mode", Mode.ADD), sys._getframe(1))
             return add_outcome
 
         build_common.Builder._add_to_context = add_to_context_and_record_step
@@ -121,14 +124,38 @@ class StepRecorder:
         if self._original_add_to_context is not None:
             build_common.Builder._add_to_context = self._original_add_to_context
 
-    def _record_if_part_changed(self, builder, part_before, mode, calling_frame):
-        if isinstance(builder, BuildPart) and mode != Mode.PRIVATE and builder._obj is not None \
-                and builder._obj is not part_before and len(self.steps) < MAX_RECORDED_STEPS:
-            self._record(builder, mode, calling_frame)
+    def _observe_operation(self, builder, part_before, mode, calling_frame):
+        if not isinstance(builder, BuildPart) or mode == Mode.PRIVATE or builder._obj is None \
+                or builder._obj is part_before:
+            return
+        with contextlib.suppress(Exception):
+            self._name_faces_and_record_step(builder, mode, calling_frame)
 
-    def _record(self, builder, mode, calling_frame):
+    def _name_faces_and_record_step(self, builder, mode, calling_frame):
         library_frames, script_line_number = _library_frames_below_script(calling_frame)
         operation, source_frame, arguments = _identify_operation(library_frames)
+        with contextlib.suppress(Exception):
+            self._remember_face_lineage(builder, operation)
+        if len(self.steps) < MAX_RECORDED_STEPS:
+            self._record(builder, mode, operation, source_frame, arguments, script_line_number)
+
+    def _lineage_key_of_operation(self, builder, operation: str) -> str:
+        if not any(known_builder is builder for known_builder in self._builders_in_order):
+            self._builders_in_order.append(builder)
+        builder_ordinal = next(ordinal for ordinal, known_builder in enumerate(self._builders_in_order)
+                               if known_builder is builder)
+        lineage_prefix = f"{builder_ordinal}:{operation}"
+        operation_ordinal = self._operation_counts_by_lineage_prefix.get(lineage_prefix, 0)
+        self._operation_counts_by_lineage_prefix[lineage_prefix] = operation_ordinal + 1
+        return f"{lineage_prefix}:{operation_ordinal}"
+
+    def _remember_face_lineage(self, builder, operation: str):
+        tokens_by_face = tokens_after_operation(self.lineage_token_by_face, builder._obj,
+                                                getattr(builder._obj, "_history", None),
+                                                self._lineage_key_of_operation(builder, operation))
+        self.lineage_token_by_face |= remembered_entries_for_tokens(tokens_by_face)
+
+    def _record(self, builder, mode, operation, source_frame, arguments, script_line_number):
         if source_frame is not None:
             arguments = arguments | _arguments_from_frame_locals(source_frame.f_locals, operation)
         part = builder.part

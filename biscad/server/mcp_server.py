@@ -29,7 +29,9 @@ Script rules:
 
 References: faces/edges/vertices are named `p<part>/f<n>`, `p<part>/e<n>`, `p<part>/v<n>`; n is the
 index in build123d's `part.faces()` / `part.edges()` order, so `p0/f3` is `result.faces()[3]` for a
-single part. Ids are stable for the same program and parameters.
+single part. Ids are stable for the same program and parameters. Each face also has a persistent id
+`p<part>/#<hash>` from its build history (topology `persistent_id`). It survives parameter changes and
+added features. Use it anywhere a face id is accepted when you keep a reference across edits.
 
 build123d cheatsheet:
   with BuildPart() as p:
@@ -194,8 +196,9 @@ def get_script(version_id: str, context: Context) -> str:
 
 @_registered_tool()
 def get_topology(version_id: str, context: Context, type: str | None = None, limit: int | None = 200) -> str:
-    """Faces and edges with stable ids (p0/f3, p0/e7), type (plane, cylinder, line, circle...), area or
-    length, centre, normal, radius, axis. Filter with type, e.g. 'cylinder' or 'circle'."""
+    """Faces and edges with stable ids (p0/f3, p0/e7) and face persistent_id (p0/#1a2b3c4d), type
+    (plane, cylinder, line, circle...), area or length, centre, normal, radius, axis. Filter with type,
+    e.g. 'cylinder' or 'circle'."""
     _identify_and_admit_caller(context)
     return json.dumps(core.filtered_topology(version_id, type, limit))
 
@@ -204,7 +207,7 @@ def get_topology(version_id: str, context: Context, type: str | None = None, lim
 def render_view(version_id: str, context: Context, view: str = "iso", labels: bool = True,
                 highlight: list[str] | None = None) -> list:
     """Render a version to an image. view: iso, iso2, iso_back, iso_below, front, back, left, right,
-    top, bottom. labels draws face ids; highlight paints the given ids (e.g. ['p0/f3']) orange."""
+    top, bottom. labels draws face ids; highlight paints the given ids (e.g. ['p0/f3'] or ['p0/#1a2b3c4d']) orange."""
     _identify_and_admit_caller(context)
     core.get_successful_version(version_id)
     if view not in VIEW_DIRECTIONS:
@@ -234,7 +237,7 @@ def get_build_steps(version_id: str, context: Context) -> str:
 @_registered_tool()
 def measure(version_id: str, a: str, context: Context, b: str | None = None) -> str:
     """Measure one entity (properties) or two (min distance, closest points, angle, parallel /
-    perpendicular). Refs like 'p0/f3', 'p0/e7', 'p0/v2' or a whole part 'p1'."""
+    perpendicular). Refs like 'p0/f3', 'p0/#1a2b3c4d', 'p0/e7', 'p0/v2' or a whole part 'p1'."""
     return _analysis_json(context, version_id, analysis.measure_references, a, b)
 
 

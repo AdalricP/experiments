@@ -367,9 +367,10 @@ def _write_compact_json(path: str, content):
     _write_json_text(path, content, separators=(",", ":"))
 
 
-def write_meshed_parts_to_directory(parts: list, output_directory: str, should_write_brep: bool = True):
+def write_meshed_parts_to_directory(parts: list, output_directory: str, should_write_brep: bool = True,
+                                    lineage_token_by_face: dict | None = None):
     os.makedirs(output_directory, exist_ok=True)
-    scene, mesh_buffers, topology = build_scene_and_topology(parts)
+    scene, mesh_buffers, topology = build_scene_and_topology(parts, lineage_token_by_face)
     _write_compact_json(os.path.join(output_directory, "scene.json"), scene)
     _write_compact_json(os.path.join(output_directory, "topology.json"), topology)
     mesh_arrays = {}
@@ -409,10 +410,10 @@ def _execute_with_file_writes_blocked(compiled_script, namespace: dict, captured
         resource.setrlimit(resource.RLIMIT_FSIZE, original_file_size_limit)
 
 
-def _try_write_step_scene(step_index: int, step_shape, step_directory: str) -> bool:
+def _try_write_step_scene(step_index: int, step_shape, step_directory: str, lineage_token_by_face: dict) -> bool:
     try:
         write_meshed_parts_to_directory([(f"step {step_index}", step_shape, STEP_PREVIEW_COLOR)], step_directory,
-                                        should_write_brep=False)
+                                        should_write_brep=False, lineage_token_by_face=lineage_token_by_face)
         return True
     except Exception:
         return False
@@ -422,7 +423,8 @@ def _write_build_step_snapshots(recorder: StepRecorder, output_directory: str, q
     set_mesh_quality("draft")
     steps_metadata = [
         step_metadata | {"has_scene": _try_write_step_scene(
-            step_metadata["index"], step_shape, os.path.join(output_directory, "steps", str(step_metadata["index"])))}
+            step_metadata["index"], step_shape, os.path.join(output_directory, "steps", str(step_metadata["index"])),
+            recorder.lineage_token_by_face)}
         for step_metadata, step_shape in finalize_recorded_steps(recorder)]
     set_mesh_quality(quality)
     _write_json_text(os.path.join(output_directory, "steps.json"), steps_metadata)
@@ -454,7 +456,8 @@ def _build_script_in_child(script_source: str, overrides: dict, output_directory
     parts = flatten_into_leaf_parts(result_shape)
     if not parts:
         raise ScriptError("`result` is not a build123d shape")
-    _scene, mesh_buffers = write_meshed_parts_to_directory(parts, output_directory)
+    _scene, mesh_buffers = write_meshed_parts_to_directory(parts, output_directory,
+                                                           lineage_token_by_face=recorder.lineage_token_by_face)
     steps_metadata = _write_build_step_snapshots(recorder, output_directory, quality)
     summary = summarize_parts_with_bounding_box(parts)
     summary["timing_ms"] = {"exec": round(execution_seconds * 1000), "total": round((time.time() - start_time) * 1000)}

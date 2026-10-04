@@ -420,10 +420,9 @@ Adding the fillet inserted new faces earlier in the walk order, so every later i
 slid. A reference to `p0/f2` that meant "the top face" now means "a fillet face". An
 agent that stored `p0/f2` across an edit would fillet the wrong thing.
 
-This is not a BISCAD bug. It is intrinsic to naming faces by regeneration order. BISCAD's
-honest position: ids are stable within a build, and stable across pure parameter
-changes, and you must re-read topology after a structural edit. The MCP guide text and
-the docs say exactly this ("Ids are stable for the same program and parameters").
+This is not a BISCAD bug. It is intrinsic to naming faces by regeneration order. Index
+ids are stable within a build and across pure parameter changes. To keep a reference
+across a structural edit, use the persistent id of the face (see "Persistent ids" below).
 
 ### How other systems attack TNP
 
@@ -441,23 +440,52 @@ the docs say exactly this ("Ids are stable for the same program and parameters")
 - **Parasolid / ACIS** (commercial kernels) carry attribute/rollback machinery that
   tags entities through the history so references survive.
 
-### Future work for BISCAD
+### Persistent ids
 
-The path to persistent naming in BISCAD is clear and does not need a new kernel:
+Each face also has a persistent id, such as `p0/#e28eef21`. Topology and scene face
+descriptors show it as `persistent_id`. Every tool that accepts `p0/f3` also accepts it:
+measure, render highlight, the viewer and the MCP tools.
 
-1. **Record a build history.** The step recorder (Section 8) already wraps every
-   operation. Extend it to tag the faces each operation creates.
-2. **Use OCCT's `BRepTools_History` / `ShapeHistory`.** OCCT's boolean and feature
-   operations can return a history object that maps input sub-shapes to the output
-   sub-shapes they became (generated / modified / deleted). Threading that through gives
-   each face a lineage: "the top face of the box, as modified by the fillet".
-3. **Expose a persistent id alongside the index id.** Keep `p0/f3` for the within-build
-   case, and add `p0/#<stable>` that survives edits. The viewer and MCP already carry
-   arbitrary id strings, so the plumbing is in place.
+The id comes from the lineage of the face, not from its position:
 
-This is the single highest-value piece of future work, because robust cross-edit
-references are what let an agent refine a design over many rounds without re-reading
-everything each time.
+1. **Name new faces.** The step recorder (Section 8) sees each `BuildPart` operation.
+   A face that no earlier face became gets a hash of the builder number, the operation
+   name, the count of earlier operations with that name in the builder, and a geometry
+   signature. The signature is the surface type plus the plane normal or the axis
+   direction. Faces with the same signature in one operation are ordered by centre.
+2. **Carry names forward.** build123d keeps a `ShapeHistory` of each operation. A face
+   that is unchanged keeps its name. A face that an operation modified gets the name of
+   its input face. When two named faces merge, the smaller name wins.
+3. **Fall back to geometry.** A face with no recorded lineage gets a hash of its
+   signature alone. Algebra-mode scripts and imported files use this path.
+4. **Keep ids unique.** When a split leaves two faces with one name, the face with the
+   smallest centre keeps it. The other faces get a derived hash.
+
+The hash is SHA-1 from `hashlib`, so ids are the same in every process.
+
+Measured with the plate above:
+
+| Program | "Top face" index id | Persistent id |
+|---|---|---|
+| `holes=2, fillet=0` | `p0/f2` | `p0/#e28eef21` |
+| `holes=3, fillet=0` | `p0/f2` | `p0/#e28eef21` |
+| `holes=2, fillet=3` | `p0/f1` | `p0/#e28eef21` |
+| `length=120` | `p0/f2` | `p0/#e28eef21` |
+
+All 8 faces of the first plate keep their persistent ids in the other three. The 4
+fillet faces get new ids. On the quadruped example, 1124 of 1128 faces get an id from
+their lineage. The cost is about 5% of the build time.
+
+Limits:
+
+- Only faces have persistent ids. Edges and vertices use index ids.
+- A new operation with the same name earlier in the same builder changes the ids of
+  faces made by later operations with that name. Another `Hole` before this `Hole` is
+  an example.
+- Faces with the same signature from one operation are told apart by centre order. An
+  added hole between two holes of one `Hole` call renames the holes after it.
+- A part that you move outside a builder keeps its ids. A part that a boolean outside a
+  builder changes falls back to geometry signatures for the changed faces.
 
 ---
 

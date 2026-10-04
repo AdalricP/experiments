@@ -16,6 +16,8 @@ from OCP.TopAbs import TopAbs_REVERSED
 from OCP.TopLoc import TopLoc_Location
 from OCP.gp import gp_TrsfForm
 
+from persistent_naming import persistent_face_ids
+
 PART_COLOR_PALETTE = ["#d9d7d2", "#4a4a4a", "#b9c3c9", "#cdbfa8", "#9aa79a", "#c9b2b2", "#a7a2b8", "#8f8f8f"]
 REVOLVED_SURFACE_TYPES = ("cylinder", "cone", "sphere", "torus")
 MESH_QUALITY_PRESETS = {"draft": (600.0, 0.5), "normal": (2000.0, 0.25), "fine": (6000.0, 0.12)}
@@ -178,13 +180,15 @@ def _concatenated_or_empty(arrays: list, dtype=None) -> np.ndarray:
     return np.zeros((0, 3), dtype) if dtype else np.zeros((0, 3))
 
 
-def mesh_part(shape, part_id: str, name: str, color: str) -> tuple[dict, dict]:
+def mesh_part(shape, part_id: str, name: str, color: str, lineage_token_by_face: dict | None = None) -> tuple[dict, dict]:
     linear_tolerance, angular_tolerance = mesh_tolerances_for_shape(shape)
     BRepMesh_IncrementalMesh(shape.wrapped, linear_tolerance, False, angular_tolerance, True)
     point_arrays, normal_arrays, index_arrays, face_descriptions = [], [], [], []
     vertex_offset, triangle_offset = 0, 0
-    for face_index, face in enumerate(shape.faces()):
-        description = describe_face(face, f"{part_id}/f{face_index}")
+    faces = shape.faces()
+    persistent_ids = persistent_face_ids(faces, part_id, lineage_token_by_face)
+    for face_index, (face, persistent_id) in enumerate(zip(faces, persistent_ids)):
+        description = describe_face(face, f"{part_id}/f{face_index}") | {"persistent_id": persistent_id}
         triangulated = _triangulate_face(face, face.wrapped.Orientation() == TopAbs_REVERSED)
         triangle_count = len(triangulated[2]) if triangulated is not None else 0
         face_descriptions.append(description | {"start": triangle_offset, "count": triangle_count})
@@ -270,8 +274,9 @@ def bounding_box_of_shapes(shapes) -> dict:
     return {"min": _rounded_floats(lowest_corner), "max": _rounded_floats(highest_corner)}
 
 
-def build_scene_and_topology(parts: list) -> tuple[dict, list, dict]:
-    meshed_parts = [mesh_part(shape, f"p{part_index}", name, color or PART_COLOR_PALETTE[part_index % len(PART_COLOR_PALETTE)])
+def build_scene_and_topology(parts: list, lineage_token_by_face: dict | None = None) -> tuple[dict, list, dict]:
+    meshed_parts = [mesh_part(shape, f"p{part_index}", name, color or PART_COLOR_PALETTE[part_index % len(PART_COLOR_PALETTE)],
+                              lineage_token_by_face)
                     for part_index, (name, shape, color) in enumerate(parts)]
     bounding_box = bounding_box_of_shapes([shape for _name, shape, _color in parts])
     scene = {"format": "biscad-scene", "version": 1, "units": "mm", "bbox": bounding_box,

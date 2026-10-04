@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import subprocess
 import sys
 import tempfile
 
@@ -205,3 +206,86 @@ def test_interference_and_bill_of_materials(api_client):
     assert len(interference["clashes"]) == 1 and abs(interference["clashes"][0]["volume_mm3"] - 500) < 1
     bill = api_client.get(f"/v1/versions/{version['id']}/bom?density=1.24").json()
     assert bill["unique_parts"] == 1 and bill["items"][0]["quantity"] == 3
+
+
+PLATE_WITH_HOLES = '''from build123d import *
+params = {"length": 80, "holes": 2, "fillet": 0}
+with BuildPart() as plate:
+    Box(params["length"], 40, 8)
+    if params["fillet"]:
+        fillet(plate.edges().filter_by(Axis.Z), params["fillet"])
+    with Locations(*[(-20 + 20 * hole_number, 0) for hole_number in range(params["holes"])]):
+        Hole(4)
+result = plate.part
+'''
+ALGEBRA_PLATE = '''from build123d import *
+params = {"holes": 1}
+result = Box(80, 40, 8)
+for hole_number in range(params["holes"]):
+    result -= Pos(-20 + 20 * hole_number, 0, 0) * Cylinder(2, 8)
+'''
+
+
+def faces_of_built_plate(api_client, script, params) -> list[dict]:
+    version = build_without_scene(api_client, script, params)
+    assert version["ok"], version.get("error")
+    return api_client.get(f"/v1/versions/{version['id']}/topology", headers=ADMIN_HEADERS).json()["parts"][0]["faces"]
+
+
+def top_face_of(faces: list[dict]) -> dict:
+    return next(face for face in faces if face["type"] == "plane" and face["normal"] == [0, 0, 1])
+
+
+def test_inserting_a_fillet_or_a_hole_keeps_the_top_face_persistent_id(api_client):
+    plain_plate = faces_of_built_plate(api_client, PLATE_WITH_HOLES, {})
+    filleted_plate = faces_of_built_plate(api_client, PLATE_WITH_HOLES, {"fillet": 3})
+    three_hole_plate = faces_of_built_plate(api_client, PLATE_WITH_HOLES, {"holes": 3})
+    assert top_face_of(plain_plate)["id"] == "p0/f2" and top_face_of(filleted_plate)["id"] == "p0/f1"
+    assert top_face_of(plain_plate)["persistent_id"] == top_face_of(filleted_plate)["persistent_id"]
+    plain_persistent_ids = {face["persistent_id"] for face in plain_plate}
+    assert plain_persistent_ids <= {face["persistent_id"] for face in filleted_plate}
+    assert plain_persistent_ids <= {face["persistent_id"] for face in three_hole_plate}
+
+
+def test_dimension_change_keeps_every_persistent_id(api_client):
+    short_plate = faces_of_built_plate(api_client, PLATE_WITH_HOLES, {"length": 80})
+    long_plate = faces_of_built_plate(api_client, PLATE_WITH_HOLES, {"length": 120})
+    assert [face["persistent_id"] for face in short_plate] == [face["persistent_id"] for face in long_plate]
+
+
+def test_new_faces_get_new_unique_persistent_ids(api_client):
+    plain_persistent_ids = {face["persistent_id"] for face in faces_of_built_plate(api_client, PLATE_WITH_HOLES, {})}
+    filleted_plate = faces_of_built_plate(api_client, PLATE_WITH_HOLES, {"fillet": 3})
+    fillet_faces = [face for face in filleted_plate if face["type"] == "cylinder" and face["radius"] == 3]
+    assert len(fillet_faces) == 4
+    assert not {face["persistent_id"] for face in fillet_faces} & plain_persistent_ids
+    assert len({face["persistent_id"] for face in filleted_plate}) == len(filleted_plate)
+
+
+def test_algebra_mode_ids_are_deterministic_and_survive_an_extra_hole(api_client):
+    one_hole_plate = faces_of_built_plate(api_client, ALGEBRA_PLATE, {"holes": 1})
+    two_hole_plate = faces_of_built_plate(api_client, ALGEBRA_PLATE, {"holes": 2})
+    assert one_hole_plate == faces_of_built_plate(api_client, ALGEBRA_PLATE, {"holes": 1})
+    assert top_face_of(one_hole_plate)["persistent_id"] == top_face_of(two_hole_plate)["persistent_id"]
+    script_printing_ids = ("import sys; sys.path.insert(0, 'server'); from build123d import Box; "
+                           "from persistent_naming import persistent_face_ids; "
+                           "print(persistent_face_ids(Box(1, 2, 3).faces(), 'p0', None))")
+    printed_ids_per_process = {subprocess.run([sys.executable, "-c", script_printing_ids], capture_output=True, text=True,
+                                              cwd=os.path.join(os.path.dirname(__file__), ".."),
+                                              env=os.environ | {"PYTHONHASHSEED": seed}).stdout for seed in ("1", "2")}
+    assert len(printed_ids_per_process) == 1 and "p0/#" in printed_ids_per_process.pop()
+
+
+def test_persistent_references_resolve_in_measure_and_render(api_client):
+    version = build_without_scene(api_client, PLATE_WITH_HOLES, {"fillet": 3})
+    faces = api_client.get(f"/v1/versions/{version['id']}/topology", headers=ADMIN_HEADERS).json()["parts"][0]["faces"]
+    top_face = top_face_of(faces)
+    bottom_face = next(face for face in faces if face.get("normal") == [0, 0, -1])
+    measurement = api_client.post(f"/v1/versions/{version['id']}/measure",
+                                  json={"a": top_face["persistent_id"], "b": bottom_face["persistent_id"]},
+                                  headers=ADMIN_HEADERS).json()
+    assert measurement["a"]["id"] == top_face["id"] and abs(measurement["distance"] - 8) < 1e-6
+    highlighted_render = api_client.get(f"/v1/versions/{version['id']}/render.png?view=top&highlight="
+                                        + top_face["persistent_id"].replace("#", "%23"), headers=ADMIN_HEADERS)
+    plain_render = api_client.get(f"/v1/versions/{version['id']}/render.png?view=top", headers=ADMIN_HEADERS)
+    assert highlighted_render.status_code == 200 and highlighted_render.content != plain_render.content

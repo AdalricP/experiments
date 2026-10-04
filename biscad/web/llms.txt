@@ -11,7 +11,7 @@ Auth: `Authorization: Bearer bsc_...` (optional; without it you get a small anon
 2. `POST /v1/build {"script", "params"?}` (MCP: `build_model`). Stateless. Read `ok`, `error`, `logs`, `summary` (volume, bbox, faces, edges per part).
 3. Look at it: `GET /v1/versions/{vid}/render-grid.png` (MCP: `render_grid`) or `render.png?view=iso&highlight=p0/f3`. Do not claim a part is correct without looking.
 4. Save: `POST /v1/documents {"name", "script", "params"?}` (MCP: `create_document`) → `version.id`. Iterate with `POST /v1/documents/{id}/versions {"script"?, "params"?, "parent"?, "message"?}` (MCP: `update_document`).
-5. Before naming a face or edge, call `GET /v1/versions/{vid}/topology` (MCP: `get_topology`). Ids follow build123d order: `p0/f3` == `part.faces()[3]` of part 0.
+5. Before naming a face or edge, call `GET /v1/versions/{vid}/topology` (MCP: `get_topology`). Ids follow build123d order: `p0/f3` == `part.faces()[3]` of part 0. Each face also has a `persistent_id` like `p0/#1a2b3c4d`. It stays the same after parameter changes and added features. Use it in place of `p0/f3` to keep a reference across edits.
 6. Check and ship: `POST /v1/versions/{vid}/check {"process": "fdm"|"cnc"|"sheet"}`, then `GET /v1/versions/{vid}/export/step`.
 7. Explain to the human: link `GET /v1/versions/{vid}/report` (HTML design report), `/explainer.gif`, or summarise `GET /v1/versions/{vid}/steps`.
 
