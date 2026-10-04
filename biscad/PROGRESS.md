@@ -24,7 +24,7 @@ Earlier phase (backend, MCP, viewer, studio, tests) is done; see git history.
 - [ ] brand: logo (white/blood-red/white band, cropped B and D), BRAND.md, CAMPAIGN.md (agent)
 - [ ] campaign.html gallery + launch.html passphrase console (agent; passphrase file is gitignored)
 - [ ] landing + docs: dark blood-red, layered CC0 Poly Haven textures, new surface.js (agent)
-- [ ] studio + viewer: Blender-grade dark UI (agent)
+- [x] studio + viewer: Blender-grade dark UI (follow-ups: dark agent-view render, real wordmark in header)
 - [ ] server: .construction style + fewer LOC, behaviour identical (agent)
 - [x] docs/HANDBOOK.md technical handbook (12k words, 9 figures)
 - [ ] Google Doc of the handbook (do last, after refactor; markdown upload via Drive create_file, image links → raw.githubusercontent)

@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>BISCAD Launch Console</title>
+<meta name="description" content="The passphrase-gated launch console. It opens each platform's own composer with the copy filled in. A human presses Post.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  --void: #0a0506;
+  --char: #120c0d;
+  --panel: #1a1213;
+  --panel_raised: #231819;
+  --line: rgba(255, 214, 214, 0.08);
+  --line_strong: rgba(255, 214, 214, 0.16);
+  --bone: #efe6e1;
+  --ash: #a3938f;
+  --smoke: #6e605d;
+  --oxblood: #4a0710;
+  --blood: #8a0b1a;
+  --blood_bright: #c1162b;
+  --ember: #ff4a3d;
+  --brass: #c9a36a;
+  --signal_ok: #4fae7c;
+  --stripe_white: #f6f1ec;
+  --display_serif: "DM Serif Display", Georgia, serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --ease_out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+* { box-sizing: border-box; }
+html { background: var(--void); }
+body { margin: 0; min-height: 100vh; background: radial-gradient(1200px 600px at 15% -10%, rgba(138, 11, 26, 0.16), transparent 60%), var(--void); color: var(--bone); font: 400 16px/1.55 var(--body); -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+button { font: inherit; color: inherit; }
+::selection { background: var(--blood_bright); color: var(--stripe_white); }
+button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--blood_bright); outline-offset: 3px; }
+
+.site_header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px clamp(16px, 4vw, 56px); border-bottom: 1px solid var(--line); }
+.site_header img { height: 22px; display: block; }
+.site_header nav { display: flex; gap: 22px; font: 500 12px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; }
+.site_header nav a { color: var(--ash); text-decoration: none; }
+.site_header nav a:hover, .site_header nav a[aria-current] { color: var(--bone); }
+
+.console { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: clamp(24px, 4vw, 64px); padding: clamp(32px, 5vw, 72px) clamp(16px, 4vw, 56px) 96px; align-items: start; }
+.arming { position: sticky; top: 24px; display: grid; gap: 20px; }
+.eyebrow { font: 500 12px/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--blood_bright); margin: 0; }
+.arming h1 { font: 400 clamp(44px, 5vw, 68px)/0.95 var(--display_serif); letter-spacing: -0.015em; margin: 0; }
+.arming h1 em { color: var(--blood_bright); }
+.lede { color: var(--ash); margin: 0; }
+.lede b { color: var(--bone); font-weight: 500; }
+
+.band_frame { position: relative; aspect-ratio: 1063 / 400; overflow: hidden; border-radius: 2px; background: var(--char); }
+.band_frame img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.band_frame .band_dim { filter: grayscale(1) brightness(0.32) contrast(1.1); }
+.band_frame .band_lit { clip-path: inset(0 100% 0 0); transition: clip-path 1.4s var(--ease_out); }
+.band_frame::after { content: ""; position: absolute; top: 0; bottom: 0; width: 2px; left: 0; background: var(--ember); box-shadow: 0 0 18px 4px rgba(255, 74, 61, 0.65); opacity: 0; transform: translateX(-4px); }
+.is_armed .band_frame .band_lit { clip-path: inset(0 0 0 0); }
+.is_armed .band_frame::after { animation: sweep_line 1.4s var(--ease_out) forwards; }
+@keyframes sweep_line { 0% { opacity: 1; transform: translateX(0); } 85% { opacity: 1; } 100% { opacity: 0; transform: translateX(calc(var(--band_width, 420px) - 2px)); } }
+
+.panel { background: linear-gradient(180deg, var(--panel), var(--char)); border: 1px solid var(--line_strong); border-radius: 10px; padding: 20px; }
+.status_row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font: 500 12px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--smoke); }
+.status_chip { display: inline-flex; align-items: center; gap: 10px; color: var(--bone); padding: 8px 12px; border: 1px solid var(--line_strong); border-radius: 999px; transition: border-color .6s, background .6s; }
+.status_chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--smoke); transition: background .6s, box-shadow .6s; }
+.is_armed .status_chip { border-color: rgba(193, 22, 43, 0.6); background: rgba(138, 11, 26, 0.18); }
+.is_armed .status_chip i { background: var(--ember); box-shadow: 0 0 0 4px rgba(255, 74, 61, 0.15), 0 0 14px var(--ember); }
+
+.unlock_form { display: grid; gap: 10px; margin-top: 18px; }
+.unlock_form label, .field_label { font: 500 11px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ash); }
+.key_slot { display: flex; align-items: stretch; background: var(--void); border: 1px solid var(--line_strong); border-radius: 8px; overflow: hidden; transition: border-color .2s; }
+.key_slot:focus-within { border-color: var(--blood_bright); }
+.key_slot input { flex: 1; min-width: 0; background: transparent; border: 0; color: var(--bone); font: 400 15px/1 var(--mono); padding: 14px 14px; letter-spacing: 0.04em; }
+.key_slot input:focus { outline: none; }
+.key_slot input::placeholder { color: var(--smoke); }
+.key_slot .reveal { background: transparent; border: 0; border-left: 1px solid var(--line); color: var(--smoke); padding: 0 14px; cursor: pointer; font: 500 11px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; }
+.key_slot .reveal:hover { color: var(--bone); }
+.arm_button { appearance: none; border: 0; border-radius: 8px; padding: 15px 18px; background: var(--blood); color: var(--stripe_white); font: 600 13px/1 var(--mono); letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; transition: background .2s, transform .1s; }
+.arm_button:hover { background: var(--blood_bright); }
+.arm_button:active { transform: translateY(1px); }
+.arm_button:disabled { background: var(--panel_raised); color: var(--smoke); cursor: default; }
+.form_message { min-height: 20px; margin: 0; font: 400 13px/1.5 var(--mono); color: var(--smoke); }
+.form_message.is_error { color: var(--ember); }
+.key_slot.is_wrong { animation: refuse 0.36s var(--ease_out); border-color: var(--ember); }
+@keyframes refuse { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-3px); } }
+.armed_note { display: none; margin-top: 18px; gap: 12px; }
+.is_armed .unlock_form { display: none; }
+.is_armed .armed_note { display: grid; }
+.armed_note p { margin: 0; color: var(--ash); font-size: 14px; }
+.disarm_button { justify-self: start; background: transparent; border: 1px solid var(--line_strong); border-radius: 999px; color: var(--ash); padding: 9px 14px; font: 500 11px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; }
+.disarm_button:hover { color: var(--bone); border-color: var(--ash); }
+
+.facts { display: grid; gap: 14px; }
+.fact_row { display: flex; justify-content: space-between; gap: 12px; font: 400 13px/1.4 var(--mono); color: var(--smoke); }
+.fact_row b { color: var(--bone); font-weight: 500; text-align: right; }
+.url_field { display: grid; gap: 8px; }
+.url_field input { width: 100%; background: var(--void); border: 1px solid var(--line_strong); border-radius: 8px; color: var(--brass); font: 400 14px/1 var(--mono); padding: 12px; }
+.url_field input:focus { outline: none; border-color: var(--blood_bright); }
+.url_field small { color: var(--smoke); font-size: 12px; }
+.progress_track { height: 4px; background: var(--line); border-radius: 4px; overflow: hidden; }
+.progress_fill { height: 100%; width: 0; background: var(--blood_bright); transition: width .5s var(--ease_out); }
+
+.channels { display: grid; gap: 20px; }
+.channels_head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; padding-bottom: 14px; border-bottom: 1px solid var(--line_strong); }
+.channels_head h2 { margin: 0; font: 400 clamp(28px, 3vw, 40px)/1 var(--display_serif); }
+.channels_head p { margin: 0; font: 400 13px/1.4 var(--mono); color: var(--smoke); }
+.channel { background: linear-gradient(180deg, var(--panel), var(--char)); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; transition: border-color .6s; }
+.is_armed .channel { border-color: var(--line_strong); }
+.channel_top { display: flex; align-items: center; gap: 14px; padding: 18px 20px; border-bottom: 1px solid var(--line); }
+.channel_glyph { flex: none; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 8px; background: var(--void); border: 1px solid var(--line_strong); font: 600 13px/1 var(--mono); color: var(--bone); }
+.channel_title { min-width: 0; flex: 1; }
+.channel_title h3 { margin: 0; font: 500 17px/1.2 var(--body); }
+.channel_title p { margin: 2px 0 0; font: 400 12px/1.4 var(--mono); color: var(--smoke); }
+.lock_state { flex: none; font: 500 11px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--smoke); display: inline-flex; align-items: center; gap: 8px; }
+.lock_state svg { width: 14px; height: 14px; }
+.is_armed .lock_state { color: var(--signal_ok); }
+.channel_body { display: grid; grid-template-columns: minmax(0, 1fr) 240px; }
+.copy_column { padding: 18px 20px; display: grid; gap: 14px; border-right: 1px solid var(--line); }
+.copy_block { display: grid; gap: 8px; }
+.copy_block_head { display: flex; justify-content: space-between; align-items: center; gap: 10px; font: 500 11px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--smoke); }
+.copy_text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 400 14px/1.6 var(--body); color: var(--ash); background: rgba(10, 5, 6, 0.6); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; filter: blur(5px); user-select: none; transition: filter .8s var(--ease_out) var(--reveal_delay, 0s), color .8s; }
+.is_armed .copy_text { filter: none; user-select: text; color: var(--bone); }
+.small_button { background: transparent; border: 1px solid var(--line_strong); border-radius: 999px; color: var(--ash); padding: 7px 11px; font: 500 10px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; }
+.small_button:hover:not(:disabled) { color: var(--bone); border-color: var(--ash); }
+.small_button.is_done { color: var(--signal_ok); border-color: var(--signal_ok); }
+button:disabled { cursor: not-allowed; opacity: 0.45; }
+.action_column { padding: 18px 20px; display: grid; gap: 14px; align-content: start; }
+.compose_button { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 13px 14px; border-radius: 8px; border: 1px solid var(--line_strong); background: var(--void); color: var(--smoke); font: 600 12px/1.2 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; text-align: left; cursor: pointer; transition: background .3s, color .3s, border-color .3s; }
+.is_armed .compose_button:not(:disabled) { background: var(--blood); border-color: var(--blood); color: var(--stripe_white); }
+.is_armed .compose_button:not(:disabled):hover { background: var(--blood_bright); }
+.compose_button svg { width: 14px; height: 14px; flex: none; }
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.checklist label { display: grid; grid-template-columns: 18px 1fr; gap: 10px; align-items: start; font-size: 13px; line-height: 1.4; color: var(--ash); cursor: pointer; }
+.checklist input { appearance: none; margin: 1px 0 0; width: 18px; height: 18px; border: 1px solid var(--line_strong); border-radius: 5px; background: var(--void); display: grid; place-items: center; cursor: pointer; transition: background .2s, border-color .2s; }
+.checklist input::after { content: ""; width: 9px; height: 5px; border: 2px solid var(--stripe_white); border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px, -1px) scale(0); transition: transform .2s var(--ease_out); }
+.checklist input:checked { background: var(--blood); border-color: var(--blood); }
+.checklist input:checked::after { transform: rotate(-45deg) translate(1px, -1px) scale(1); }
+.checklist input:checked + span { color: var(--smoke); text-decoration: line-through; text-decoration-color: rgba(193, 22, 43, 0.6); }
+.checklist_title { font: 500 11px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--smoke); margin: 4px 0 0; }
+
+.promise { margin: 0; padding: 14px 16px; border-left: 2px solid var(--blood_bright); background: rgba(138, 11, 26, 0.08); font-size: 14px; color: var(--ash); }
+.promise b { color: var(--bone); font-weight: 500; }
+
+.toast_live { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); opacity: 0; background: var(--panel_raised); border: 1px solid var(--line_strong); color: var(--bone); font: 500 12px/1 var(--mono); letter-spacing: 0.08em; padding: 12px 16px; border-radius: 999px; transition: opacity .25s, transform .25s; pointer-events: none; z-index: 20; }
+.toast_live.is_visible { opacity: 1; transform: translate(-50%, 0); }
+.visually_hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (max-width: 980px) {
+  .console { grid-template-columns: 1fr; }
+  .arming { position: static; }
+}
+@media (max-width: 640px) {
+  .channel_body { grid-template-columns: 1fr; }
+  .copy_column { border-right: 0; border-bottom: 1px solid var(--line); }
+  .site_header nav a.optional { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+<header class="site_header">
+  <a href="index.html" aria-label="BISCAD home"><img src="campaign/wordmark.svg" alt="BISCAD"></a>
+  <nav>
+    <a href="index.html" class="optional">Home</a>
+    <a href="campaign.html">Campaign</a>
+    <a href="launch.html" aria-current="page">Launch</a>
+  </nav>
+</header>
+
+<main class="console" id="console_root">
+  <section class="arming" aria-labelledby="console_title">
+    <p class="eyebrow">Launch console</p>
+    <h1 id="console_title">Arm the <em>launch.</em></h1>
+    <p class="lede">This page never posts. After you arm it, each channel opens <b>the platform’s own composer</b> with the copy filled in. You read it. You press Post.</p>
+
+    <div class="band_frame" aria-hidden="true">
+      <img class="band_dim" src="campaign/logo.svg" alt="">
+      <img class="band_lit" src="campaign/logo.svg" alt="">
+    </div>
+
+    <div class="panel">
+      <div class="status_row"><span>Status</span><span class="status_chip" role="status" aria-live="polite"><i></i><span id="status_text">Locked</span></span></div>
+      <form class="unlock_form" id="unlock_form" autocomplete="off">
+        <label for="passphrase_input">Passphrase</label>
+        <div class="key_slot" id="key_slot">
+          <input id="passphrase_input" name="passphrase" type="password" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="Type the launch passphrase" required>
+          <button type="button" class="reveal" id="reveal_button" aria-pressed="false">Show</button>
+        </div>
+        <button type="submit" class="arm_button" id="arm_button">Arm launch</button>
+        <p class="form_message" id="form_message">The page checks a SHA-256 hash. The passphrase is not stored here.</p>
+      </form>
+      <div class="armed_note">
+        <p>Armed. Composers are live. Nothing is sent until you press Post on each platform.</p>
+        <button type="button" class="disarm_button" id="disarm_button">Disarm</button>
+      </div>
+    </div>
+
+    <div class="panel facts">
+      <div class="url_field">
+        <label class="field_label" for="launch_url_input">Launch URL</label>
+        <input id="launch_url_input" type="url" inputmode="url" spellcheck="false" value="https://biscad.dev">
+        <small>Every link and composer uses this URL. Set the real public URL before launch day.</small>
+      </div>
+      <div class="fact_row"><span>Launch window</span><b>Tue · 15:00–16:00 UTC</b></div>
+      <div class="fact_row"><span>Now</span><b id="clock_text">—</b></div>
+      <div class="fact_row"><span>Checklist</span><b id="progress_text">0 / 0</b></div>
+      <div class="progress_track"><div class="progress_fill" id="progress_fill"></div></div>
+      <div class="fact_row"><span>Facts checked</span><b>2026-10-04 · re-check on the day</b></div>
+    </div>
+
+    <p class="promise"><b>We never post on your behalf.</b> No API keys, no tokens, no scheduled jobs. The buttons open public share pages: X intent, LinkedIn share, HN submit, Reddit submit.</p>
+  </section>
+
+  <section class="channels" aria-labelledby="channels_title">
+    <div class="channels_head">
+      <h2 id="channels_title">Channels</h2>
+      <p>Post in this order. Answer every reply for 2 hours.</p>
+    </div>
+    <div id="channel_list" class="channels" inert></div>
+  </section>
+</main>
+
+<div class="toast_live" role="status" aria-live="polite"></div>
+
+<script>
+const launch_passphrase_sha256_hex = "c316dab7f90bb9d94be68e945c41329f6b999763419e752f9ca3e036772d774e";
+const local_storage_key_for_checklist = "biscad_launch_checklist_v1";
+const local_storage_key_for_launch_url = "biscad_launch_url_v1";
+const default_launch_url = "https://biscad.dev";
+const onshape_limits_url = "https://onshape-public.github.io/docs/auth/limits/";
+const onshape_pricing_url = "https://www.onshape.com/en/pricing";
+
+const launch_channels = [
+  {
+    channel_id: "hacker_news",
+    glyph: "Y",
+    title: "Hacker News · Show HN",
+    note: "Submit first. Then post the first comment at once.",
+    build_composer_url: (launch_url, copy_by_id) => "https://news.ycombinator.com/submitlink?u=" + encodeURIComponent(launch_url) + "&t=" + encodeURIComponent(copy_by_id.title),
+    composer_label: "Open HN submit",
+    copy_blocks: [
+      { copy_id: "title", label: "Title", template: "Show HN: BISCAD – a CAD kernel API for agents, priced per build instead of per seat" },
+      { copy_id: "first_comment", label: "First comment", template: "Hi HN. I built BISCAD, a hosted CAD kernel. It is build123d and OpenCascade behind a REST API and an MCP server, with a web studio for humans to check what agents make.\n\nWhy: I wanted an agent to iterate on parts in a loop. Onshape's API docs list 2,500 to 10,000 API calls per user per year, depending on plan ({{limits}}). An agent loop can make that many calls in an hour. Their seats include a lot more than the API, so this is not a dunk on the product. It is a different shape of pricing for a different user.\n\nWhat it does today:\n- POST a build123d script, get a solid, a PNG render, stable face/edge ids and a summary\n- measure, section, mass, DFM checks, diff between versions\n- export STEP, STL, 3MF, GLB, BREP, SVG, DXF; import STEP/STL\n- MCP: claude mcp add --transport http biscad {{url}}/mcp\n- build-step replay and HTML design reports, so a human can review an agent's part\n\nFree plan at launch: 2,000 builds/month. Builds run in a sandboxed subprocess with resource limits. It is early. I would like to hear what breaks, and what you would use it for.\n\nFrom the maker of Voncad, a terminal CAD viewer." },
+    ],
+    checklist: ["Submit the link with the exact title", "Post the first comment within 1 minute", "Do not ask anyone to upvote", "Reply to every comment for 2 hours"],
+  },
+  {
+    channel_id: "x_thread",
+    glyph: "X",
+    title: "X · launch thread",
+    note: "The composer opens with post 1. Reply to it with posts 2–7.",
+    build_composer_url: (launch_url, copy_by_id) => "https://twitter.com/intent/tweet?text=" + encodeURIComponent(copy_by_id.post_1),
+    composer_label: "Open X composer",
+    copy_blocks: [
+      { copy_id: "post_1", label: "Post 1", template: "On a $2,500/yr Onshape Professional seat you get 5,000 API calls a year.\nAn agent at 1.4 calls/s spends that in about an hour.\nSo I built a CAD kernel that charges per build. A thread:" },
+      { copy_id: "post_2", label: "Post 2", template: "BISCAD = build123d + OpenCascade behind REST and MCP.\nPOST a script. Get back a solid, a PNG render, stable face ids and a mass summary." },
+      { copy_id: "post_3", label: "Post 3", template: "Agents can see what they built. Every build returns an image. They check the part before they cut it." },
+      { copy_id: "post_4", label: "Post 4", template: "One line to add it to Claude Code:\nclaude mcp add --transport http biscad {{url}}/mcp" },
+      { copy_id: "post_5", label: "Post 5", template: "Export STEP, STL, 3MF, GLB, BREP, SVG, DXF. Your geometry leaves when you do." },
+      { copy_id: "post_6", label: "Post 6", template: "Free at launch: 2,000 builds/month. Paid plans: per build, not per seat.\nMake CAD great again → {{url}}" },
+      { copy_id: "post_7", label: "Post 7", template: "Sources, because receipts matter:\nOnshape API limits: {{limits}}\nOnshape pricing: {{pricing}}" },
+    ],
+    checklist: ["Attach card 02 (One hour per year) to post 1", "Post 1, then reply with posts 2–7 in order", "Quote the viral post only with a link to it", "Pin the thread to the profile"],
+  },
+  {
+    channel_id: "linkedin",
+    glyph: "in",
+    title: "LinkedIn · post",
+    note: "LinkedIn’s share page takes the URL only. Copy the text, then paste it.",
+    build_composer_url: (launch_url) => "https://www.linkedin.com/sharing/share-offsite/?url=" + encodeURIComponent(launch_url),
+    composer_label: "Open LinkedIn share",
+    copy_blocks: [
+      { copy_id: "post", label: "Post text", template: "Per-seat pricing made sense when one engineer sat at one workstation.\n\nAI agents don't sit. They loop. An agent that designs a bracket might call a CAD API hundreds of times in an hour.\n\nOnshape's developer docs list 2,500 to 10,000 API calls per user per year, depending on plan. That is fine for a human clicking buttons. It is about an hour for an agent.\n\nSo we built BISCAD: an OpenCascade / build123d CAD kernel behind a REST API and an MCP server. It is priced per build. The free plan includes 2,000 builds a month at launch.\n\nEvery build returns a render, stable face ids and a summary, so engineers can review what an agent made before it ships. Exports: STEP, STL, 3MF, GLB, BREP, SVG, DXF.\n\nIf you build hardware with code, or agents that build hardware, I would like your feedback.\n\n{{url}}" },
+    ],
+    checklist: ["Copy the post text first", "Paste it into the share box", "Attach card 06 (Seats are for stadiums)"],
+  },
+  {
+    channel_id: "product_hunt",
+    glyph: "P",
+    title: "Product Hunt · launch",
+    note: "Schedule the post in advance for 00:01 PT on launch day.",
+    build_composer_url: () => "https://www.producthunt.com/posts/new",
+    composer_label: "Open Product Hunt",
+    copy_blocks: [
+      { copy_id: "tagline", label: "Tagline · 60 chars max", template: "The CAD kernel for agents. Per build, not per seat." },
+      { copy_id: "description", label: "Description · 260 chars max", template: "BISCAD is build123d and OpenCascade behind a REST API and an MCP server. Send a script, get a solid, a render, stable face ids and STEP/STL/3MF exports. Built for AI agents that iterate fast. 2,000 builds/month free at launch." },
+    ],
+    checklist: ["Upload cards 01, 02, 08, 09, 12 at 16:9", "Add a studio screenshot", "Post the maker comment", "Do not ask for upvotes"],
+  },
+  {
+    channel_id: "reddit_cad",
+    glyph: "r/",
+    title: "Reddit · r/cad",
+    note: "Launch day + 1. Check the subreddit rules on self-promotion first.",
+    build_composer_url: (launch_url, copy_by_id) => "https://www.reddit.com/r/cad/submit?url=" + encodeURIComponent(launch_url) + "&title=" + encodeURIComponent(copy_by_id.title),
+    composer_label: "Open r/cad submit",
+    copy_blocks: [
+      { copy_id: "title", label: "Title", template: "I built a hosted build123d/OpenCascade kernel with a REST API and MCP server. Free tier, per-build pricing. Feedback wanted." },
+      { copy_id: "comment", label: "First comment", template: "I make Voncad (a terminal CAD viewer). BISCAD is the server side: you POST a build123d script and get a solid, a PNG render, face/edge ids, mass properties and exports (STEP, STL, 3MF, GLB, BREP, SVG, DXF). There is a web studio too. I built it because seat-licensed CAD APIs cap API calls per year (Onshape's docs list 2,500–10,000 per user), and agents burn through that fast. Free plan is 2,000 builds/month at launch. What would you need before you trusted it in a real workflow?" },
+    ],
+    checklist: ["Read the r/cad rules", "Submit, then post the first comment", "Reply to every comment"],
+  },
+  {
+    channel_id: "reddit_3d_printing",
+    glyph: "r/",
+    title: "Reddit · r/3Dprinting",
+    note: "Launch day + 2. Or r/functionalprint, if its rules fit better.",
+    build_composer_url: (launch_url, copy_by_id) => "https://www.reddit.com/r/3Dprinting/submit?url=" + encodeURIComponent(launch_url) + "&title=" + encodeURIComponent(copy_by_id.title),
+    composer_label: "Open r/3Dprinting submit",
+    copy_blocks: [
+      { copy_id: "title", label: "Title", template: "Parametric parts from a URL: change a number, get a new STL/3MF back" },
+      { copy_id: "comment", label: "First comment", template: "Scripts can define params, e.g. params = {\"width\": 40}. Call the API with a new width and download a fresh STL or 3MF. There is a DFM check for FDM too. It runs on build123d/OpenCascade and the free tier is 2,000 builds a month. Happy to share the bracket script from the screenshot." },
+    ],
+    checklist: ["Read the subreddit rules", "Attach a photo or render of a real part", "Submit, then post the first comment"],
+  },
+];
+
+const console_root = document.getElementById("console_root");
+const channel_list_element = document.getElementById("channel_list");
+const launch_url_input = document.getElementById("launch_url_input");
+const toast_element = document.querySelector(".toast_live");
+let toast_hide_timer_identifier = 0;
+
+function read_from_local_storage(storage_key, fallback_value) {
+  try {
+    const stored_text = localStorage.getItem(storage_key);
+    return stored_text === null ? fallback_value : JSON.parse(stored_text);
+  } catch (storage_error) {
+    return fallback_value;
+  }
+}
+
+function write_to_local_storage(storage_key, stored_value) {
+  try { localStorage.setItem(storage_key, JSON.stringify(stored_value)); } catch (storage_error) { show_status_toast("This browser blocks local storage. Ticks will not be saved."); }
+}
+
+function show_status_toast(message_text) {
+  toast_element.textContent = message_text;
+  toast_element.classList.add("is_visible");
+  clearTimeout(toast_hide_timer_identifier);
+  toast_hide_timer_identifier = setTimeout(() => toast_element.classList.remove("is_visible"), 2000);
+}
+
+function read_launch_url_without_trailing_slash() {
+  const typed_launch_url = launch_url_input.value.trim() || default_launch_url;
+  return typed_launch_url.replace(/\/+$/, "");
+}
+
+function fill_copy_template(template_text, launch_url) {
+  return template_text.replaceAll("{{url}}", launch_url).replaceAll("{{limits}}", onshape_limits_url).replaceAll("{{pricing}}", onshape_pricing_url);
+}
+
+function build_filled_copy_by_id(channel, launch_url) {
+  return Object.fromEntries(channel.copy_blocks.map((copy_block) => [copy_block.copy_id, fill_copy_template(copy_block.template, launch_url)]));
+}
+
+function create_element(tag_name, class_name, text_content) {
+  const created_element = document.createElement(tag_name);
+  if (class_name) created_element.className = class_name;
+  if (text_content !== undefined) created_element.textContent = text_content;
+  return created_element;
+}
+
+function create_lock_state_element() {
+  const lock_state_element = create_element("span", "lock_state");
+  lock_state_element.innerHTML = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path class="shackle" d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg><span>Locked</span>';
+  return lock_state_element;
+}
+
+function create_copy_block_element(copy_block, reveal_delay_in_seconds) {
+  const copy_block_element = create_element("div", "copy_block");
+  const head_element = create_element("div", "copy_block_head");
+  const copy_button = create_element("button", "small_button", "Copy");
+  copy_button.type = "button";
+  copy_button.dataset.copyId = copy_block.copy_id;
+  head_element.append(create_element("span", "", copy_block.label), copy_button);
+  const text_element = create_element("p", "copy_text");
+  text_element.dataset.copyId = copy_block.copy_id;
+  text_element.style.setProperty("--reveal_delay", reveal_delay_in_seconds + "s");
+  copy_block_element.append(head_element, text_element);
+  return copy_block_element;
+}
+
+function create_checklist_element(channel, saved_ticks) {
+  const fragment = document.createDocumentFragment();
+  fragment.append(create_element("p", "checklist_title", "Checklist"));
+  const list_element = create_element("ul", "checklist");
+  channel.checklist.forEach((checklist_text, checklist_index) => {
+    const tick_key = channel.channel_id + ":" + checklist_index;
+    const list_item = create_element("li");
+    const label_element = create_element("label");
+    const checkbox_element = create_element("input");
+    checkbox_element.type = "checkbox";
+    checkbox_element.dataset.tickKey = tick_key;
+    checkbox_element.checked = Boolean(saved_ticks[tick_key]);
+    label_element.append(checkbox_element, create_element("span", "", checklist_text));
+    list_item.append(label_element);
+    list_element.append(list_item);
+  });
+  fragment.append(list_element);
+  return fragment;
+}
+
+function create_channel_element(channel, channel_index, saved_ticks) {
+  const channel_element = create_element("article", "channel");
+  channel_element.dataset.channelId = channel.channel_id;
+  const top_element = create_element("div", "channel_top");
+  const title_element = create_element("div", "channel_title");
+  title_element.append(create_element("h3", "", channel.title), create_element("p", "", channel.note));
+  top_element.append(create_element("span", "channel_glyph", channel.glyph), title_element, create_lock_state_element());
+  const body_element = create_element("div", "channel_body");
+  const copy_column = create_element("div", "copy_column");
+  channel.copy_blocks.forEach((copy_block, block_index) => copy_column.append(create_copy_block_element(copy_block, 0.25 + channel_index * 0.12 + block_index * 0.05)));
+  const action_column = create_element("div", "action_column");
+  const compose_button = create_element("button", "compose_button");
+  compose_button.type = "button";
+  compose_button.dataset.composeChannel = channel.channel_id;
+  compose_button.innerHTML = '<span></span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 3h7v7M13 3 4 12"/></svg>';
+  compose_button.querySelector("span").textContent = channel.composer_label;
+  action_column.append(compose_button, create_checklist_element(channel, saved_ticks));
+  body_element.append(copy_column, action_column);
+  channel_element.append(top_element, body_element);
+  return channel_element;
+}
+
+function render_all_channels() {
+  const saved_ticks = read_from_local_storage(local_storage_key_for_checklist, {});
+  channel_list_element.replaceChildren(...launch_channels.map((channel, channel_index) => create_channel_element(channel, channel_index, saved_ticks)));
+  refresh_copy_text_for_launch_url();
+  refresh_checklist_progress();
+}
+
+function refresh_copy_text_for_launch_url() {
+  const launch_url = read_launch_url_without_trailing_slash();
+  launch_channels.forEach((channel) => {
+    const filled_copy_by_id = build_filled_copy_by_id(channel, launch_url);
+    const channel_element = channel_list_element.querySelector('[data-channel-id="' + channel.channel_id + '"]');
+    channel_element.querySelectorAll(".copy_text").forEach((text_element) => { text_element.textContent = filled_copy_by_id[text_element.dataset.copyId]; });
+  });
+}
+
+function refresh_checklist_progress() {
+  const all_checkboxes = [...channel_list_element.querySelectorAll('input[type="checkbox"]')];
+  const ticked_count = all_checkboxes.filter((checkbox_element) => checkbox_element.checked).length;
+  document.getElementById("progress_text").textContent = ticked_count + " / " + all_checkboxes.length;
+  document.getElementById("progress_fill").style.width = (all_checkboxes.length ? (100 * ticked_count) / all_checkboxes.length : 0) + "%";
+}
+
+function save_checklist_tick(checkbox_element) {
+  const saved_ticks = read_from_local_storage(local_storage_key_for_checklist, {});
+  saved_ticks[checkbox_element.dataset.tickKey] = checkbox_element.checked;
+  write_to_local_storage(local_storage_key_for_checklist, saved_ticks);
+  refresh_checklist_progress();
+}
+
+async function compute_sha256_hex_of_text(input_text) {
+  const digest_buffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input_text));
+  return [...new Uint8Array(digest_buffer)].map((byte_value) => byte_value.toString(16).padStart(2, "0")).join("");
+}
+
+function set_console_armed_state(is_armed) {
+  console_root.classList.toggle("is_armed", is_armed);
+  document.getElementById("status_text").textContent = is_armed ? "Armed" : "Locked";
+  channel_list_element.inert = !is_armed;
+  channel_list_element.querySelectorAll(".lock_state span").forEach((label_element) => { label_element.textContent = is_armed ? "Armed" : "Locked"; });
+  console_root.style.setProperty("--band_width", console_root.querySelector(".band_frame").offsetWidth + "px");
+}
+
+function refuse_wrong_passphrase(form_message_element) {
+  const key_slot_element = document.getElementById("key_slot");
+  key_slot_element.classList.remove("is_wrong");
+  void key_slot_element.offsetWidth;
+  key_slot_element.classList.add("is_wrong");
+  form_message_element.textContent = "That passphrase does not match. Check spaces and punctuation.";
+  form_message_element.classList.add("is_error");
+}
+
+async function attempt_to_arm_console(submit_event) {
+  submit_event.preventDefault();
+  const passphrase_input = document.getElementById("passphrase_input");
+  const form_message_element = document.getElementById("form_message");
+  if (!window.crypto || !crypto.subtle) {
+    form_message_element.textContent = "This page needs HTTPS or localhost to check the passphrase.";
+    form_message_element.classList.add("is_error");
+    return;
+  }
+  const typed_passphrase_hash = await compute_sha256_hex_of_text(passphrase_input.value.trim());
+  if (typed_passphrase_hash !== launch_passphrase_sha256_hex) {
+    refuse_wrong_passphrase(form_message_element);
+    return;
+  }
+  passphrase_input.value = "";
+  form_message_element.classList.remove("is_error");
+  set_console_armed_state(true);
+  show_status_toast("Armed. Nothing is posted until you press Post.");
+}
+
+function open_channel_composer(channel_id) {
+  const channel = launch_channels.find((candidate_channel) => candidate_channel.channel_id === channel_id);
+  const launch_url = read_launch_url_without_trailing_slash();
+  const composer_url = channel.build_composer_url(launch_url, build_filled_copy_by_id(channel, launch_url));
+  window.open(composer_url, "_blank", "noopener,noreferrer");
+}
+
+async function copy_channel_text(copy_button) {
+  const text_element = copy_button.closest(".copy_block").querySelector(".copy_text");
+  try {
+    await navigator.clipboard.writeText(text_element.textContent);
+    copy_button.textContent = "Copied";
+    copy_button.classList.add("is_done");
+    setTimeout(() => { copy_button.textContent = "Copy"; copy_button.classList.remove("is_done"); }, 1500);
+  } catch (clipboard_error) {
+    show_status_toast("Copy failed. Select the text and copy it by hand.");
+  }
+}
+
+function show_current_time_in_utc() {
+  const current_time = new Date();
+  const utc_time_text = current_time.toISOString().slice(11, 16) + " UTC";
+  const weekday_name = current_time.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" });
+  document.getElementById("clock_text").textContent = weekday_name + " · " + utc_time_text;
+}
+
+function restore_saved_launch_url() {
+  launch_url_input.value = read_from_local_storage(local_storage_key_for_launch_url, default_launch_url);
+}
+
+document.getElementById("unlock_form").addEventListener("submit", attempt_to_arm_console);
+document.getElementById("disarm_button").addEventListener("click", () => set_console_armed_state(false));
+document.getElementById("reveal_button").addEventListener("click", (click_event) => {
+  const passphrase_input = document.getElementById("passphrase_input");
+  const is_revealed = passphrase_input.type === "text";
+  passphrase_input.type = is_revealed ? "password" : "text";
+  click_event.currentTarget.textContent = is_revealed ? "Show" : "Hide";
+  click_event.currentTarget.setAttribute("aria-pressed", String(!is_revealed));
+});
+launch_url_input.addEventListener("input", () => {
+  write_to_local_storage(local_storage_key_for_launch_url, launch_url_input.value.trim());
+  refresh_copy_text_for_launch_url();
+});
+channel_list_element.addEventListener("click", (click_event) => {
+  const compose_button = click_event.target.closest("[data-compose-channel]");
+  if (compose_button) open_channel_composer(compose_button.dataset.composeChannel);
+  const copy_button = click_event.target.closest("button[data-copy-id]");
+  if (copy_button) copy_channel_text(copy_button);
+});
+channel_list_element.addEventListener("change", (change_event) => {
+  if (change_event.target.matches('input[type="checkbox"]')) save_checklist_tick(change_event.target);
+});
+
+restore_saved_launch_url();
+render_all_channels();
+show_current_time_in_utc();
+setInterval(show_current_time_in_utc, 15000);
+</script>
+</body>
+</html>
