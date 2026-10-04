@@ -82,13 +82,13 @@ body.ws-model .layout, body.ws-analyze .layout { grid-template-columns: 0 0 minm
 body.ws-analyze { --right: 360px; }
 body.ws-model .left, body.ws-analyze .left, body.ws-model .resizer, body.ws-analyze .resizer { visibility: hidden; }
 
-.selectw { position: relative; min-width: 0; }
+.selectw { position: relative; flex: 0 1 260px; min-width: 80px; }
 .selectw::after { content: ""; position: absolute; right: 9px; top: 50%; width: 5px; height: 5px; border-right: 1.5px solid var(--ash); border-bottom: 1.5px solid var(--ash); transform: translateY(-70%) rotate(45deg); pointer-events: none; }
-.selectw select { -webkit-appearance: none; appearance: none; height: 22px; max-width: 260px; padding: 0 24px 0 8px; border: 1px solid transparent; border-radius: 4px; background: var(--field); cursor: pointer; outline: none; font-size: 12px; }
+.selectw select { -webkit-appearance: none; appearance: none; width: 100%; height: 22px; text-overflow: ellipsis; padding: 0 24px 0 8px; border: 1px solid transparent; border-radius: 4px; background: var(--field); cursor: pointer; outline: none; font-size: 12px; }
 .selectw select:hover { background: var(--field_hover); }
 .selectw select:focus { border-color: var(--ember); }
 .selectw option { background: var(--panel); }
-.build { height: 22px; padding: 0 9px; gap: 7px; }
+.build { flex: none; height: 22px; padding: 0 9px; gap: 7px; }
 .build svg { width: 10px; height: 10px; }
 .build kbd { background: rgba(0, 0, 0, 0.25); border: 0; color: rgba(255, 255, 255, 0.75); font-size: 9.5px; padding: 2px 4px; min-width: 0; }
 .build.busy { pointer-events: none; }
@@ -168,7 +168,7 @@ body.ws-model .left, body.ws-analyze .left, body.ws-model .resizer, body.ws-anal
 .vp-info b { font-weight: 500; font-size: 12px; color: var(--bone); }
 .vp-info span { font-size: 11.5px; color: var(--ash); }
 .timeline { position: relative; flex: none; border-top: 1px solid var(--void); background: var(--panel); }
-.timeline-empty { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; color: var(--smoke); font-size: 11.5px; }
+.timeline-empty { display: flex; align-items: center; gap: 8px; height: 30px; white-space: nowrap; overflow: hidden; padding: 0 10px; color: var(--smoke); font-size: 11.5px; }
 .timeline-empty svg { width: 15px; height: 15px; }
 #steps:not([hidden]) + .timeline-empty { display: none; }
 #shadebar .vc-tb[data-tip]:hover::after { left: auto; right: 0; transform: none; }
@@ -221,7 +221,7 @@ body.ws-model .left, body.ws-analyze .left, body.ws-model .resizer, body.ws-anal
 .params-foot button:hover { background: var(--field_hover); }
 
 .kv { display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; }
-.kv dt { color: var(--ash); font-size: 11.5px; }
+.kv dt { color: var(--ash); font-size: 11.5px; white-space: nowrap; }
 .kv dd { margin: 0; text-align: right; font: 500 11px/1.4 var(--mono); color: var(--bone); }
 .kv dd.bad { color: var(--ember); }
 .kv .grp { grid-column: 1 / -1; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line); font: 600 9.5px/1 var(--body); letter-spacing: 0.12em; text-transform: uppercase; color: var(--smoke); }
@@ -314,6 +314,5 @@ body.ws-model .left, body.ws-analyze .left, body.ws-model .resizer, body.ws-anal
   .notice { left: 52px; right: 8px; bottom: 8px; max-width: none; font-size: 11px; }
   .menu-share, .menu-settings { position: fixed; left: 8px; right: 8px; top: 48px; width: auto; }
   .menu { right: -40px; }
-  .selectw select { max-width: 180px; }
   .build kbd, .ask-k { display: none; }
 }
