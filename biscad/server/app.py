@@ -9,7 +9,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import build123d as preloaded_kernel_so_forked_workers_start_warm
 
-from fastapi import Body, FastAPI, File, Form, Query, Request, UploadFile
+from typing import Annotated
+
+from fastapi import Body, FastAPI, File, Form, Path, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, Response
@@ -29,6 +31,8 @@ from core import ApiError
 WEB_DIRECTORY = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "web"))
 API_VERSION = "1.0.0"
 MAX_UPLOAD_SIZE_IN_BYTES = 64 << 20
+version_id_in_path = Annotated[str, Path(alias="vid")]
+document_id_in_path = Annotated[str, Path(alias="did")]
 IMMUTABLE_CACHE_HEADERS = {"Cache-Control": "public, max-age=31536000, immutable"}
 
 
@@ -118,28 +122,28 @@ def list_documents(request: Request):
     return {"documents": store.list_documents(admit_caller(request)["owner"])}
 
 
-@app.get("/v1/documents/{document_id}")
-def get_document(request: Request, document_id: str):
+@app.get("/v1/documents/{did}")
+def get_document(request: Request, document_id: document_id_in_path):
     return core.get_visible_document_with_history(admit_caller(request), document_id)
 
 
-@app.patch("/v1/documents/{document_id}")
-def patch_document(request: Request, document_id: str, body: dict = Body(...)):
+@app.patch("/v1/documents/{did}")
+def patch_document(request: Request, document_id: document_id_in_path, body: dict = Body(...)):
     caller = admit_caller(request)
     core.get_document_owned_by_caller(caller, document_id)
     store.update_document_name_and_visibility(document_id, body.get("name"), body.get("public"))
     return core.get_visible_document_with_history(caller, document_id)
 
 
-@app.delete("/v1/documents/{document_id}")
-def delete_document(request: Request, document_id: str):
+@app.delete("/v1/documents/{did}")
+def delete_document(request: Request, document_id: document_id_in_path):
     core.get_document_owned_by_caller(admit_caller(request), document_id)
     store.delete_document_and_its_versions(document_id)
     return {"deleted": document_id}
 
 
-@app.post("/v1/documents/{document_id}/versions")
-def new_version(request: Request, document_id: str, body: dict = Body(...)):
+@app.post("/v1/documents/{did}/versions")
+def new_version(request: Request, document_id: document_id_in_path, body: dict = Body(...)):
     caller = admit_caller(request)
     return {"version": core.build_new_document_version(caller, document_id, body.get("script"), body.get("params"),
                                                        body.get("parent"), body.get("message"))}
@@ -154,32 +158,32 @@ async def import_file(request: Request, file: UploadFile = File(...), name: str 
     return await run_in_threadpool(core.import_cad_file, caller, file.filename or "upload.step", file_bytes, name)
 
 
-@app.get("/v1/versions/{version_id}")
-def get_version(request: Request, version_id: str):
+@app.get("/v1/versions/{vid}")
+def get_version(request: Request, version_id: version_id_in_path):
     admit_caller(request)
     return core.public_view_of_version(core.get_version(version_id))
 
 
-@app.get("/v1/versions/{version_id}/scene")
-def get_scene(request: Request, version_id: str):
+@app.get("/v1/versions/{vid}/scene")
+def get_scene(request: Request, version_id: version_id_in_path):
     admit_caller(request)
     return Response(core.read_version_file_text(version_id, "scene.json"), media_type="application/json",
                     headers=IMMUTABLE_CACHE_HEADERS)
 
 
-@app.get("/v1/versions/{version_id}/topology")
-def get_topology(request: Request, version_id: str, type: str | None = None, limit: int | None = None):
+@app.get("/v1/versions/{vid}/topology")
+def get_topology(request: Request, version_id: version_id_in_path, type: str | None = None, limit: int | None = None):
     admit_caller(request)
     return core.filtered_topology(version_id, type, limit)
 
 
-@app.get("/v1/versions/{version_id}/steps")
-def get_steps(request: Request, version_id: str):
+@app.get("/v1/versions/{vid}/steps")
+def get_steps(request: Request, version_id: version_id_in_path):
     return {"steps": core.public_view_of_version(admit_caller_to_successful_version(request, version_id))["steps"]}
 
 
-@app.get("/v1/versions/{version_id}/steps/{step_index}/scene")
-def get_step_scene(request: Request, version_id: str, step_index: int):
+@app.get("/v1/versions/{vid}/steps/{idx}/scene")
+def get_step_scene(request: Request, version_id: version_id_in_path, step_index: Annotated[int, Path(alias="idx")]):
     admit_caller(request)
     return Response(core.read_version_file_text(version_id, "scene.json", step_index=step_index), media_type="application/json",
                     headers=IMMUTABLE_CACHE_HEADERS)
@@ -200,8 +204,8 @@ def _comma_separated_ids(text: str) -> list[str]:
     return [entity_id for entity_id in text.split(",") if entity_id]
 
 
-@app.get("/v1/versions/{version_id}/render.png")
-def render_png(request: Request, version_id: str, view: str = "iso", w: int = Query(800, le=2000, ge=64),
+@app.get("/v1/versions/{vid}/render.png")
+def render_png(request: Request, version_id: version_id_in_path, view: str = "iso", w: int = Query(800, le=2000, ge=64),
                h: int = Query(600, le=2000, ge=64), highlight: str = "", labels: bool = False,
                edges: bool = True, hide: str = ""):
     admit_caller_to_successful_version(request, version_id)
@@ -211,8 +215,9 @@ def render_png(request: Request, version_id: str, view: str = "iso", w: int = Qu
     return Response(png_bytes, media_type="image/png")
 
 
-@app.get("/v1/versions/{version_id}/render-grid.png")
-def render_grid(request: Request, version_id: str, size: int = Query(420, le=1000, ge=128), labels: bool = False):
+@app.get("/v1/versions/{vid}/render-grid.png")
+def render_grid(request: Request, version_id: version_id_in_path, size: int = Query(420, le=1000, ge=128),
+                labels: bool = False):
     admit_caller_to_successful_version(request, version_id)
     return Response(render.render_four_view_grid_png(store.directory_for_version(version_id), size, labels), media_type="image/png")
 
@@ -225,8 +230,8 @@ def _download_name_for_version(version: dict) -> str:
                    for character in document["name"])[:60] or "model"
 
 
-@app.get("/v1/versions/{version_id}/export/{export_format}")
-def export(request: Request, version_id: str, export_format: str):
+@app.get("/v1/versions/{vid}/export/{fmt}")
+def export(request: Request, version_id: version_id_in_path, export_format: Annotated[str, Path(alias="fmt")]):
     admit_caller(request)
     format_name = export_format.lower()
     if format_name not in analysis.EXPORT_FORMATS:
@@ -240,29 +245,29 @@ def export(request: Request, version_id: str, export_format: str):
                         filename=f"{_download_name_for_version(version)}-{version_id[-6:]}.{extension}")
 
 
-@app.post("/v1/versions/{version_id}/measure")
-def measure(request: Request, version_id: str, body: dict = Body(...)):
+@app.post("/v1/versions/{vid}/measure")
+def measure(request: Request, version_id: version_id_in_path, body: dict = Body(...)):
     admit_caller_to_successful_version(request, version_id)
     if not body.get("a"):
         raise ApiError(400, "a is required (e.g. 'p0/f3')")
     return core.run_analysis_on_version(version_id, analysis.measure_references, body["a"], body.get("b"))
 
 
-@app.post("/v1/versions/{version_id}/section")
-def section(request: Request, version_id: str, body: dict = Body(...)):
+@app.post("/v1/versions/{vid}/section")
+def section(request: Request, version_id: version_id_in_path, body: dict = Body(...)):
     admit_caller(request)
     return core.run_analysis_on_version(version_id, analysis.section_with_plane, body.get("origin", [0, 0, 0]),
                                         body.get("normal", [0, 0, 1]))
 
 
-@app.get("/v1/versions/{version_id}/mass")
-def mass(request: Request, version_id: str, density: float = Query(7.85, gt=0, lt=100)):
+@app.get("/v1/versions/{vid}/mass")
+def mass(request: Request, version_id: version_id_in_path, density: float = Query(7.85, gt=0, lt=100)):
     admit_caller(request)
     return core.run_analysis_on_version(version_id, analysis.mass_properties, density)
 
 
-@app.post("/v1/versions/{version_id}/check")
-def check(request: Request, version_id: str, body: dict = Body(default={})):
+@app.post("/v1/versions/{vid}/check")
+def check(request: Request, version_id: version_id_in_path, body: dict = Body(default={})):
     admit_caller_to_successful_version(request, version_id)
     process = (body or {}).get("process", "fdm")
     if process not in analysis.BUILD_ENVELOPES_IN_MILLIMETERS:
@@ -270,14 +275,14 @@ def check(request: Request, version_id: str, body: dict = Body(default={})):
     return core.run_analysis_on_version(version_id, analysis.check_manufacturability, process)
 
 
-@app.get("/v1/versions/{version_id}/interference")
-def interference(request: Request, version_id: str):
+@app.get("/v1/versions/{vid}/interference")
+def interference(request: Request, version_id: version_id_in_path):
     admit_caller(request)
     return core.run_analysis_on_version(version_id, analysis.detect_interference, timeout_in_seconds=120)
 
 
-@app.get("/v1/versions/{version_id}/bom")
-def bom(request: Request, version_id: str, density: float | None = Query(None, gt=0, lt=100)):
+@app.get("/v1/versions/{vid}/bom")
+def bom(request: Request, version_id: version_id_in_path, density: float | None = Query(None, gt=0, lt=100)):
     admit_caller(request)
     return core.run_analysis_on_version(version_id, analysis.bill_of_materials, density)
 
@@ -300,8 +305,8 @@ def _cached_version_file(version_directory: str, file_name: str, produce_content
     return cached_path
 
 
-@app.get("/v1/versions/{version_id}/explainer.gif")
-def explainer_gif(request: Request, version_id: str):
+@app.get("/v1/versions/{vid}/explainer.gif")
+def explainer_gif(request: Request, version_id: version_id_in_path):
     admit_caller_to_successful_version(request, version_id)
     version_directory = store.directory_for_version(version_id)
     gif_path = _cached_version_file(version_directory, "explainer.gif",
@@ -316,8 +321,8 @@ def _design_report_html(version: dict, version_directory: str) -> str:
                                               manufacturability)
 
 
-@app.get("/v1/versions/{version_id}/report", response_class=HTMLResponse)
-def report(request: Request, version_id: str):
+@app.get("/v1/versions/{vid}/report", response_class=HTMLResponse)
+def report(request: Request, version_id: version_id_in_path):
     version = admit_caller_to_successful_version(request, version_id)
     version_directory = store.directory_for_version(version_id)
     report_path = _cached_version_file(version_directory, "report.html",

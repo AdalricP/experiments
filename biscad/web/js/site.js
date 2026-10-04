@@ -68,16 +68,10 @@ function wire_code_tabs(tab_box) {
   if (preferred_tab) select_code_tab(tab_buttons, preferred_tab);
 }
 
-async function load_hero_viewer(viewer_frame) {
+function load_hero_viewer(viewer_frame) {
   const viewer_iframe = viewer_frame.querySelector("iframe");
-  const viewer_source = viewer_iframe.dataset.src;
-  const viewer_response = await fetch(viewer_source.split("?")[0], { method: "HEAD", cache: "no-store" }).catch(() => null);
-  if (!viewer_response || !viewer_response.ok) {
-    viewer_frame.querySelector(".screen_label").innerHTML = 'Live viewer offline · <a href="studio.html">open the studio</a>';
-    return;
-  }
   viewer_iframe.addEventListener("load", () => setTimeout(() => viewer_frame.classList.add("is_ready"), 350), { once: true });
-  viewer_iframe.src = viewer_source;
+  viewer_iframe.src = viewer_iframe.dataset.src;
 }
 
 function describe_key_request_failure(http_response, response_body, api_base_url) {
