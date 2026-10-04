@@ -4,12 +4,9 @@ import contextlib
 import json
 import os
 import sys
+from typing import Annotated
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-import build123d as preloaded_kernel_so_forked_workers_start_warm
-
-from typing import Annotated
 
 from fastapi import Body, FastAPI, File, Form, Path, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -209,12 +206,13 @@ def _comma_separated_ids(text: str) -> list[str]:
 def render_png(request: Request, version_id: version_id_in_path, view: str = "iso",
                width_in_pixels: int = Query(800, alias="w", le=2000, ge=64),
                height_in_pixels: int = Query(600, alias="h", le=2000, ge=64), highlight: str = "", labels: bool = False,
-               edges: bool = True, hide: str = ""):
+               edges: bool = True, hide: str = "", theme: str = Query("light", pattern="^(light|dark)$")):
     admit_caller_to_successful_version(request, version_id)
+    background_for_theme = {"light": "#ffffff", "dark": "#161011"}[theme]
     png_bytes = render.render_version_png(store.directory_for_version(version_id), _parse_view_argument(view),
                                           width_in_pixels, height_in_pixels,
                                           highlight=_comma_separated_ids(highlight), labels=labels, edges=edges,
-                                          hidden=_comma_separated_ids(hide))
+                                          hidden=_comma_separated_ids(hide), background=background_for_theme)
     return Response(png_bytes, media_type="image/png")
 
 

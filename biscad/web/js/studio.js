@@ -587,7 +587,7 @@ async function showAgentView() {
   const hl = viewer.selection.filter((s) => s.includes('/')).join(',');
   const path = agentView === 'grid'
     ? `/v1/versions/${id}/render-grid.png?labels=1${hl ? '&highlight=' + encodeURIComponent(hl) : ''}`
-    : `/v1/versions/${id}/render.png?view=${agentView}&labels=1&w=1200&h=900${hl ? '&highlight=' + encodeURIComponent(hl) : ''}`;
+    : `/v1/versions/${id}/render.png?view=${agentView}&labels=1&theme=dark&w=1200&h=900${hl ? '&highlight=' + encodeURIComponent(hl) : ''}`;
   $('#agentUrl').textContent = path.replace(/&w=1200&h=900/, '');
   $('#agentLoad').classList.add('on');
   try {

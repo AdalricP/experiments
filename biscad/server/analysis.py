@@ -70,21 +70,17 @@ def _write_3mf(parts: list, temporary_path: str):
 
 
 def _write_export_file(format_name: str, version_directory: str, parts: list, compound, temporary_path: str):
-    if format_name == "step":
-        return bd.export_step(compound, temporary_path)
-    if format_name == "stl":
-        return bd.export_stl(compound, temporary_path, tolerance=EXPORT_LINEAR_DEFLECTION_IN_MILLIMETERS,
-                             angular_tolerance=EXPORT_ANGULAR_DEFLECTION_IN_RADIANS)
-    if format_name == "glb":
-        return bd.export_gltf(compound, temporary_path, binary=True, linear_deflection=EXPORT_LINEAR_DEFLECTION_IN_MILLIMETERS,
-                              angular_deflection=EXPORT_ANGULAR_DEFLECTION_IN_RADIANS)
-    if format_name == "brep":
-        return bd.export_brep(compound, temporary_path)
-    if format_name == "3mf":
-        return _write_3mf(parts, temporary_path)
-    if format_name == "obj":
-        return _write_obj(version_directory, temporary_path)
-    return _write_three_view_drawing(compound, temporary_path, format_name)
+    linear_deflection, angular_deflection = EXPORT_LINEAR_DEFLECTION_IN_MILLIMETERS, EXPORT_ANGULAR_DEFLECTION_IN_RADIANS
+    writers = {
+        "step": lambda: bd.export_step(compound, temporary_path),
+        "stl": lambda: bd.export_stl(compound, temporary_path, tolerance=linear_deflection, angular_tolerance=angular_deflection),
+        "glb": lambda: bd.export_gltf(compound, temporary_path, binary=True, linear_deflection=linear_deflection,
+                                      angular_deflection=angular_deflection),
+        "brep": lambda: bd.export_brep(compound, temporary_path),
+        "3mf": lambda: _write_3mf(parts, temporary_path),
+        "obj": lambda: _write_obj(version_directory, temporary_path),
+    }
+    writers.get(format_name, lambda: _write_three_view_drawing(compound, temporary_path, format_name))()
 
 
 def export_version(version_directory: str, format_name: str) -> str:
@@ -174,7 +170,7 @@ def _resolve_reference(parts: list, reference: str):
 
 
 def _rounded_point(point, decimal_places: int) -> list[float]:
-    return [round(point.X(), decimal_places), round(point.Y(), decimal_places), round(point.Z(), decimal_places)]
+    return [round(coordinate, decimal_places) for coordinate in (point.X(), point.Y(), point.Z())]
 
 
 def _distance_measurements(first_entity, second_entity) -> dict:
@@ -461,12 +457,14 @@ def _face_signatures(shape) -> set:
 
 
 def _boolean_volume_changes(first_shape, second_shape) -> dict:
+    changes = {}
     try:
         added_material, removed_material = second_shape - first_shape, first_shape - second_shape
-        return {"volume_added": round(added_material.volume, 4) if added_material else 0.0,
-                "volume_removed": round(removed_material.volume, 4) if removed_material else 0.0}
+        changes["volume_added"] = round(added_material.volume, 4) if added_material else 0.0
+        changes["volume_removed"] = round(removed_material.volume, 4) if removed_material else 0.0
     except Exception as boolean_error:
-        return {"boolean_error": str(boolean_error)}
+        changes["boolean_error"] = str(boolean_error)
+    return changes
 
 
 def diff_versions(first_version_directory: str, second_version_directory: str) -> dict:

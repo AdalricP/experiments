@@ -86,8 +86,7 @@ def _sanitized_copy_of_module(module_name: str):
     for submodule_name in module_name.split(".")[1:]:
         real_module = getattr(real_module, submodule_name)
     sanitized_module = types.ModuleType(module_name)
-    for member_name, member in _exposable_module_members(real_module).items():
-        setattr(sanitized_module, member_name, member)
+    sanitized_module.__dict__.update(_exposable_module_members(real_module))
     _sanitized_module_cache[module_name] = sanitized_module
     return sanitized_module
 
