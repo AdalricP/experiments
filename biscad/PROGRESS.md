@@ -26,6 +26,7 @@ Earlier phase (backend, MCP, viewer, studio, tests) is done; see git history.
 - [ ] landing + docs: dark blood-red, layered CC0 Poly Haven textures, new surface.js (agent)
 - [ ] studio + viewer: Blender-grade dark UI (agent)
 - [ ] server: .construction style + fewer LOC, behaviour identical (agent)
-- [ ] docs/HANDBOOK.md technical handbook (agent) → Google Doc
+- [x] docs/HANDBOOK.md technical handbook (12k words, 9 figures)
+- [ ] Google Doc of the handbook (do last, after refactor; markdown upload via Drive create_file, image links → raw.githubusercontent)
 - [ ] JS style/LOC pass after redesigns land
 - [ ] final integration check, screenshots, preview artifact, ping user (bell + push)
