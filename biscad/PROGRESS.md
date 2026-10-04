@@ -21,12 +21,13 @@ Earlier phase (backend, MCP, viewer, studio, tests) is done; see git history.
 - [x] purge AutoWell material from public repo + history; rename to BISCAD
 - [x] AGENTS.md, .construction rules, brand tokens, overnight bell (artifact + 4 tones in bell/)
 - [x] hourly keep-working trigger; Cloud Run autoscaling deploy script
-- [ ] brand: logo (white/blood-red/white band, cropped B and D), BRAND.md, CAMPAIGN.md (agent)
-- [ ] campaign.html gallery + launch.html passphrase console (agent; passphrase file is gitignored)
-- [ ] landing + docs: dark blood-red, layered CC0 Poly Haven textures, new surface.js (agent)
+- [x] brand: logo (white/blood-red/white band, cropped B and D), BRAND.md, CAMPAIGN.md (agent)
+- [x] campaign.html gallery + launch.html passphrase console (agent; passphrase file is gitignored)
+- [x] landing + docs: dark blood-red, layered CC0 Poly Haven textures, new surface.js (agent)
 - [x] studio + viewer: Blender-grade dark UI (follow-ups: dark agent-view render, real wordmark in header)
-- [ ] server: .construction style + fewer LOC, behaviour identical (agent)
+- [x] server: .construction style + fewer LOC, behaviour identical (agent)
 - [x] docs/HANDBOOK.md technical handbook (12k words, 9 figures)
-- [ ] Google Doc of the handbook (do last, after refactor; markdown upload via Drive create_file, image links → raw.githubusercontent)
+- [x] handbook PDF: docs/BISCAD-handbook.pdf (36 pages); Google Doc skipped (offer to user)
 - [ ] JS style/LOC pass after redesigns land
-- [ ] final integration check, screenshots, preview artifact, ping user (bell + push)
+- [x] final integration check (41 tests, studio flow vs live server, no errors), preview artifact https://claude.ai/artifact/PxrByvS6GQ6Z8tCTfvd4pu, pinged user
+- [ ] keep improving: JS .construction style + fewer LOC (viewer.js/studio.js/site.js), perf (vectorize tessellate node loops), persistent naming
