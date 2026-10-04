@@ -32,23 +32,41 @@ const viewer = new Viewer($('#viewer'), {
   measureProvider: (a, b, vid) => api.post(`/v1/versions/${vid}/measure`, { a, b }),
 });
 window.biscadViewer = viewer;
-mountToolbar(viewer, $('#tb'), ['select', 'measure', 'section', 'explode', '|', 'views', 'fit', 'projection', '|', 'render', 'bbox', 'screenshot', 'help']);
+$('#tb').classList.add('vc-vertical');
+mountToolbar(viewer, $('#tb'), ['select', 'measure', 'section', 'explode', '|', 'bbox', 'screenshot', '|', 'help']);
+mountToolbar(viewer, $('#viewbar'), ['projection', 'views', 'fit']);
+mountToolbar(viewer, $('#shadebar'), ['overlays', '|', 'shading']);
+$$('#viewbar, #shadebar').forEach((strip_element) => strip_element.classList.add('vc-strip', 'vc-top'));
 new PartTree(viewer, $('#tree'));
 new SelectionPanel(viewer, $('#sel'));
 const steps = new StepsBar(viewer, $('#steps'), {
   loadStepScene: (st) => api.get(st.scene_url),
-  onChange: (i, st) => markStepLine(st),
+  onChange: (i, st) => { markStepLine(st); update_viewport_info_overlay(); },
 });
 
 viewer.addEventListener('selectionchange', (e) => {
   const n = e.detail.ids.length;
   $('#selCount').textContent = n ? `${n} · ${e.detail.ids.slice(0, 3).join(', ')}${n > 3 ? '…' : ''}` : '';
+  $('#statusSel').textContent = n ? `Selected ${e.detail.ids.slice(0, 2).join(', ')}${n > 2 ? ` +${n - 2}` : ''}` : '';
   if (n) openSec('secSel');
+  update_viewport_info_overlay();
 });
 viewer.addEventListener('load', () => {
   $('#partCount').textContent = viewer.parts.length;
+  $('#statusMesh').textContent = `${viewer.parts.length} part${viewer.parts.length === 1 ? '' : 's'} · ${(viewer.triangles || 0).toLocaleString()} tris`;
   renderSummary();
+  update_viewport_info_overlay();
 });
+viewer.addEventListener('statechange', () => update_viewport_info_overlay());
+
+function update_viewport_info_overlay() {
+  const tool_names_for_overlay = { measure: 'Measure', select: '' };
+  const projection_name = viewer.state.projection === 'perspective' ? 'User Perspective' : 'User Orthographic';
+  const active_step = steps.steps[steps.current];
+  const step_label = active_step && steps.current < steps.steps.length - 1 ? ` · step ${steps.current + 1}/${steps.steps.length}` : '';
+  $('#vpProjection').textContent = projection_name + (tool_names_for_overlay[viewer.state.tool] ? ` · ${tool_names_for_overlay[viewer.state.tool]}` : '');
+  $('#vpContext').textContent = `${$('#docName').value}${step_label}${viewer.selection.length ? ' | ' + viewer.selection[viewer.selection.length - 1] : ''}`;
+}
 
 // ---------------------------------------------------------------- editor
 
@@ -194,7 +212,7 @@ function renderParams() {
   const root = $('#params');
   $('#paramCount').textContent = S.schema.length || '';
   if (!S.schema.length) {
-    root.innerHTML = `<div class="vc-sel-empty">Define <code style="font-family:var(--mono)">params = {"width": 40}</code> at the top of the script to get live sliders — each change rebuilds the model.</div>`;
+    root.innerHTML = `<div class="vc-sel-empty">Define <code>params = {"width": 40}</code> at the top of the script to get live sliders. Each change rebuilds the model.</div>`;
     return;
   }
   root.innerHTML = '';
@@ -212,13 +230,12 @@ function renderParams() {
     row.className = 'param' + (S.params[p.name] != null ? ' mod' : '');
     if (p.type === 'string') {
       row.innerHTML = `<label title="${esc(p.name)}">${esc(p.name)}</label><input type="text" value="${esc(val)}">`;
-      row.style.gridTemplateColumns = '1fr 120px';
       row.querySelector('input').onchange = (e) => setParam(p, e.target.value, row);
       root.appendChild(row);
       continue;
     }
     const [min, max, step] = paramRange(p);
-    row.innerHTML = `<label title="${esc(p.name)}">${esc(p.name.replace(/_/g, ' '))}</label><input type="number" step="${step}" value="${val}"><input type="range" min="${Math.min(min, val)}" max="${Math.max(max, val)}" step="${step}" value="${val}">`;
+    row.innerHTML = `<label title="${esc(p.name)}">${esc(p.name.replace(/_/g, ' '))}</label><div class="param-field"><input type="range" min="${Math.min(min, val)}" max="${Math.max(max, val)}" step="${step}" value="${val}" aria-label="${esc(p.name)}"><input type="number" step="${step}" value="${val}"></div>`;
     const num = row.querySelector('input[type=number]'), rng = row.querySelector('input[type=range]');
     paintRange(rng);
     rng.oninput = () => { num.value = rng.value; setParam(p, +rng.value, row, 260); };
@@ -233,7 +250,7 @@ function renderParams() {
   }
   const foot = document.createElement('div');
   foot.className = 'params-foot';
-  foot.innerHTML = `<span>Live configuration · rebuilds on change</span><button>Reset</button>`;
+  foot.innerHTML = `<span>Drag a field or type a value</span><button>Reset all</button>`;
   foot.querySelector('button').onclick = () => { S.params = {}; renderParams(); scheduleBuild(0); };
   root.appendChild(foot);
 }
@@ -324,7 +341,8 @@ function renderSummary() {
   const g = (dens) => (vol / 1000) * dens;
   const mass = (x) => (x >= 1000 ? `${fmt(x / 1000, 3)} kg` : `${fmt(x, 1)} g`);
   $('#buildTime').textContent = S.lastBuildMs != null ? `${fmt(S.lastBuildMs, 0)} ms` : (S.online ? '' : 'sample');
-  if (!viewer.parts.length) { $('#summary').innerHTML = '<div class="vc-empty" style="padding:0">No model yet.</div>'; return; }
+  $('#statusBuild').textContent = S.lastBuildMs != null ? `Built in ${fmt(S.lastBuildMs, 0)} ms` : '';
+  if (!viewer.parts.length) { $('#summary').innerHTML = '<div class="vc-sel-empty">No model yet.</div>'; return; }
   $('#summary').innerHTML = `
     <div class="big"><div><b>${fmt(vol / 1000, 2)}</b><span>cm³ volume</span></div><div><b>${fmt(area / 100, 1)}</b><span>cm² area</span></div></div>
     <dl class="kv">
@@ -338,7 +356,7 @@ function renderSummary() {
       <dt>Parts</dt><dd>${st.parts}</dd>
       <dt>Faces · edges</dt><dd>${st.faces} · ${st.edges}</dd>
       <dt>Triangles</dt><dd>${st.triangles.toLocaleString()}</dd>
-      ${sm?.parts?.some((p) => p.valid === false) ? `<dt>Validity</dt><dd style="color:#b3261e">invalid solid</dd>` : sm?.parts ? `<dt>Validity</dt><dd>valid B-rep</dd>` : ''}
+      ${sm?.parts?.some((p) => p.valid === false) ? `<dt>Validity</dt><dd class="bad">invalid solid</dd>` : sm?.parts ? `<dt>Validity</dt><dd>valid B-rep</dd>` : ''}
       ${!sm ? `<dt>Source</dt><dd>mesh estimate</dd>` : ''}
     </dl>`;
 }
@@ -623,6 +641,9 @@ async function checkOnline() {
   setStatus('busy', 'Connecting');
   S.online = await api.ping();
   setStatus(S.online ? 'online' : 'offline', S.online ? 'Online' : 'Offline demo');
+  const api_state_element = $('#statusApi');
+  api_state_element.className = 'api-state ' + (S.online ? 'online' : 'offline');
+  api_state_element.textContent = S.online ? `API ${(api.base || location.origin).replace(/^https?:\/\//, '')}` : 'API offline · samples only';
   if (!S.online) notice(`<b>Offline demo</b><span>Samples only — building needs the BISCAD API.</span><button data-settings>Set API</button>`);
   updateDirty();
   return S.online;
@@ -751,6 +772,22 @@ $('#secHistory').classList.add('closed');
   });
 })();
 
+$('#workspaces').onclick = (event) => {
+  const workspace_button = event.target.closest('button');
+  if (workspace_button) set_workspace(workspace_button.dataset.ws);
+};
+function set_workspace(workspace_name) {
+  document.body.classList.remove('ws-script', 'ws-model', 'ws-analyze');
+  document.body.classList.add('ws-' + workspace_name);
+  $$('#workspaces button').forEach((workspace_button) => workspace_button.classList.toggle('on', workspace_button.dataset.ws === workspace_name));
+  if (workspace_name === 'analyze') { ['secModel', 'secSel', 'secParts'].forEach(openSec); $('#secParams').classList.add('closed'); }
+  if (workspace_name === 'script') { openSec('secParams'); setTimeout(() => editor.refresh(), 0); }
+}
+
+function is_typing_target(event_target) {
+  return !!event_target?.closest?.('input, textarea, select, button, [contenteditable="true"], .CodeMirror');
+}
+
 function setTab(tab) {
   document.body.classList.remove('tab-code', 'tab-model', 'tab-inspect');
   document.body.classList.add('tab-' + tab);
@@ -773,7 +810,10 @@ window.addEventListener('keydown', (e) => {
     if (innerWidth <= 760) setTab('code');
     askInput.focus();
   } else if (e.key === 'Escape') { closeMenus(); $('#agentModal').hidden = true; }
+  else if (!mod && !is_typing_target(e.target) && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && steps.steps.length > 1) { e.preventDefault(); steps.step_by(e.key === 'ArrowLeft' ? -1 : 1); }
+  else if (!mod && !is_typing_target(e.target) && e.key === ' ' && steps.steps.length > 1) { e.preventDefault(); steps.playing ? steps.stop() : steps.play(); }
 });
+$('#docName').addEventListener('input', () => update_viewport_info_overlay());
 $('#buildBtn').title = `Build (${MOD} Enter)`;
 $('#buildBtn kbd').textContent = isMac ? '⌘↵' : 'Ctrl ↵';
 

@@ -1,26 +1,23 @@
-"""Text-to-CAD: describe a part, Claude writes the build123d program, the kernel builds it,
-Claude looks at the renders and fixes what's wrong. Optional: needs ANTHROPIC_API_KEY on the
-server (or an `ant auth login` profile). Without it, /v1/agent returns 501.
-
-The loop is ours, not a tool runner: write -> build -> (error? feed it back) -> render grid ->
-"is this right?" -> fix, up to MAX_ROUNDS. Every round is a real version, so the user can scrub
-through the agent's attempts.
-"""
 from __future__ import annotations
 
 import base64
 import os
 import re
 
+import anthropic
+
 import core
-import render as R
+import render
 import store
 from mcp_server import GUIDE
 
 MODEL = os.environ.get("BISCAD_AGENT_MODEL", "claude-opus-5-5")
 MAX_ROUNDS = int(os.environ.get("BISCAD_AGENT_ROUNDS", "4"))
+MAX_REPLY_TOKENS = 16000
+MAX_STEPS_SHOWN_TO_MODEL = 30
+REVIEW_GRID_TILE_SIZE_IN_PIXELS = 380
 
-SYSTEM = GUIDE + """
+SYSTEM_PROMPT = GUIDE + """
 
 You are BISCAD's CAD engineer. You write complete build123d programs.
 Rules for every reply that contains a program:
@@ -33,104 +30,110 @@ feature count, placement, holes going through, nothing floating). If it is corre
 the single word DONE. Otherwise reply with the corrected full program.
 """
 
-_client = None
+_anthropic_client = None
 
 
-def available() -> bool:
+def is_available() -> bool:
     if os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"):
         return True
     return os.path.isdir(os.path.expanduser("~/.config/anthropic"))
 
 
-def client():
-    global _client
-    if _client is None:
-        import anthropic
-        _client = anthropic.Anthropic()
-    return _client
+def anthropic_client():
+    global _anthropic_client
+    if _anthropic_client is None:
+        _anthropic_client = anthropic.Anthropic()
+    return _anthropic_client
 
 
-def _ask(messages):
-    """One model turn. Returns the reply text."""
-    import anthropic
+def ask_model_for_reply(messages: list) -> str:
     try:
-        resp = client().beta.messages.create(
-            model=MODEL,
-            max_tokens=16000,
-            system=SYSTEM,
-            messages=messages,
-            output_config={"effort": "medium"},
-            betas=["server-side-fallback-2026-07-01"],
-            fallbacks="default",
-        )
+        response = anthropic_client().beta.messages.create(
+            model=MODEL, max_tokens=MAX_REPLY_TOKENS, system=SYSTEM_PROMPT, messages=messages,
+            output_config={"effort": "medium"}, betas=["server-side-fallback-2026-07-01"], fallbacks="default")
     except anthropic.RateLimitError:
         raise core.ApiError(429, "the AI model is rate limited, retry shortly", "agent_rate_limited")
     except anthropic.AuthenticationError:
         raise core.ApiError(501, "the server's Anthropic credentials are invalid", "agent_unavailable")
-    except anthropic.APIStatusError as e:
-        raise core.ApiError(502, f"AI model error ({e.status_code})", "agent_error")
+    except anthropic.APIStatusError as status_error:
+        raise core.ApiError(502, f"AI model error ({status_error.status_code})", "agent_error")
     except anthropic.APIConnectionError:
         raise core.ApiError(502, "could not reach the AI model", "agent_error")
-    if resp.stop_reason == "refusal":
+    if response.stop_reason == "refusal":
         raise core.ApiError(422, "the AI model declined this request", "agent_refused")
-    return "".join(b.text for b in resp.content if b.type == "text").strip()
+    return "".join(block.text for block in response.content if block.type == "text").strip()
 
 
-def extract_code(text: str) -> str | None:
-    m = re.search(r"```(?:python|py)?\s*\n(.*?)```", text, re.S)
-    return m.group(1).strip() + "\n" if m else None
+def extract_python_program(reply_text: str) -> str | None:
+    program_match = re.search(r"```(?:python|py)?\s*\n(.*?)```", reply_text, re.S)
+    return program_match.group(1).strip() + "\n" if program_match else None
 
 
-def _img_block(png: bytes):
+def _image_content_block(png_bytes: bytes) -> dict:
     return {"type": "image", "source": {"type": "base64", "media_type": "image/png",
-                                         "data": base64.standard_b64encode(png).decode()}}
+                                         "data": base64.standard_b64encode(png_bytes).decode()}}
 
 
-def run(who: dict, prompt: str, base_script: str | None = None, document_id: str | None = None) -> dict:
-    """-> {ok, version, rounds:[{version_id, ok, error, note}], final_note}"""
+def _first_request_message(prompt: str, base_script: str | None) -> dict:
+    request_text = f"Request: {prompt.strip()}"
+    if base_script:
+        request_text += f"\n\nModify this existing program to satisfy the request:\n```python\n{base_script}\n```"
+    return {"role": "user", "content": request_text}
+
+
+def _build_failure_message(version: dict) -> dict:
+    return {"role": "user", "content": f"The build failed:\n{version['error']}\n{(version.get('logs') or '')[-1500:]}\nFix it."}
+
+
+def _review_request_message(version: dict) -> dict:
+    summary = version["summary"]
+    lowest, highest = summary["bbox"]["min"], summary["bbox"]["max"]
+    facts = (f"Built OK: {len(summary['parts'])} part(s), size {highest[0]-lowest[0]:.1f} × {highest[1]-lowest[1]:.1f} × "
+             f"{highest[2]-lowest[2]:.1f} mm, volume {summary['volume']:,.0f} mm³, "
+             f"faces {sum(part['faces'] for part in summary['parts'])}.\n"
+             "Steps:\n" + "\n".join(f"{step['index'] + 1}. {step['description']}"
+                                    for step in version["steps"][:MAX_STEPS_SHOWN_TO_MODEL]))
+    grid_png = render.render_four_view_grid_png(store.directory_for_version(version["id"]), REVIEW_GRID_TILE_SIZE_IN_PIXELS)
+    return {"role": "user", "content": [
+        _image_content_block(grid_png),
+        {"type": "text", "text": facts + "\n\nIso, front, top and right views are above. "
+                                         "Reply DONE if this matches the request, otherwise the corrected program."},
+    ]}
+
+
+def _build_round_program(caller: dict, document_id: str | None, program: str, parent: str | None, prompt: str) -> dict:
+    message = f"agent: {prompt[:80]}"
+    if document_id:
+        return core.build_new_document_version(caller, document_id, program, None, parent, message)
+    return core.build_version(caller, program, None, None, parent, message)
+
+
+def run_text_to_cad(caller: dict, prompt: str, base_script: str | None = None, document_id: str | None = None) -> dict:
     if not prompt or not prompt.strip():
         raise core.ApiError(400, "prompt is required")
-    if not available():
+    if not is_available():
         raise core.ApiError(501, "text-to-CAD is not configured on this server (set ANTHROPIC_API_KEY)", "agent_unavailable")
-    first = f"Request: {prompt.strip()}"
-    if base_script:
-        first += f"\n\nModify this existing program to satisfy the request:\n```python\n{base_script}\n```"
-    messages = [{"role": "user", "content": first}]
-    rounds, last_ok, parent = [], None, None
-    for _ in range(MAX_ROUNDS):
-        reply = _ask(messages)
+    messages = [_first_request_message(prompt, base_script)]
+    rounds, last_successful_version, parent = [], None, None
+    for _round_number in range(MAX_ROUNDS):
+        reply = ask_model_for_reply(messages)
         messages.append({"role": "assistant", "content": reply})
-        if reply.strip().upper().startswith("DONE") and last_ok:
+        if reply.strip().upper().startswith("DONE") and last_successful_version:
             break
-        code = extract_code(reply)
-        if not code:
-            if last_ok:
-                break
+        program = extract_python_program(reply)
+        if not program and last_successful_version:
+            break
+        if not program:
             messages.append({"role": "user", "content": "Reply with the full program in one ```python block."})
             continue
         note = re.sub(r"```.*?```", "", reply, flags=re.S).strip()[:400]
-        if document_id:
-            v = core.new_version(who, document_id, code, None, parent, f"agent: {prompt[:80]}")
-        else:
-            v = core.build(who, code, None, None, parent, f"agent: {prompt[:80]}")
-        rounds.append({"version_id": v["id"], "ok": v["ok"], "error": v.get("error"), "note": note})
-        parent = v["id"]
-        if not v["ok"]:
-            messages.append({"role": "user", "content": f"The build failed:\n{v['error']}\n{(v.get('logs') or '')[-1500:]}\nFix it."})
-            continue
-        last_ok = v
-        s = v["summary"]
-        lo, hi = s["bbox"]["min"], s["bbox"]["max"]
-        facts = (f"Built OK: {len(s['parts'])} part(s), size {hi[0]-lo[0]:.1f} × {hi[1]-lo[1]:.1f} × {hi[2]-lo[2]:.1f} mm, "
-                 f"volume {s['volume']:,.0f} mm³, faces {sum(p['faces'] for p in s['parts'])}.\n"
-                 "Steps:\n" + "\n".join(f"{st['index'] + 1}. {st['description']}" for st in v["steps"][:30]))
-        grid = R.render_grid(store.vdir(v["id"]), 380)
-        messages.append({"role": "user", "content": [
-            _img_block(grid),
-            {"type": "text", "text": facts + "\n\nIso, front, top and right views are above. "
-                                             "Reply DONE if this matches the request, otherwise the corrected program."},
-        ]})
-    if not last_ok:
+        version = _build_round_program(caller, document_id, program, parent, prompt)
+        rounds.append({"version_id": version["id"], "ok": version["ok"], "error": version.get("error"), "note": note})
+        parent = version["id"]
+        last_successful_version = version if version["ok"] else last_successful_version
+        messages.append(_review_request_message(version) if version["ok"] else _build_failure_message(version))
+    if not last_successful_version:
         return {"ok": False, "version": None, "rounds": rounds,
                 "error": rounds[-1]["error"] if rounds else "the model did not produce a program"}
-    return {"ok": True, "version": core.public_version(store.get_version(last_ok["id"])), "rounds": rounds}
+    return {"ok": True, "version": core.public_view_of_version(store.get_version(last_successful_version["id"])),
+            "rounds": rounds}

@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>BISCAD Viewer</title>
   <meta name="description" content="Interactive 3D CAD model — BISCAD">
-  <meta name="theme-color" content="#f7f7f5">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%231a1a1a'/%3E%3Cpath d='M8 9l8 15 8-15' fill='none' stroke='%23fff' stroke-width='2.4'/%3E%3C/svg%3E">
+  <meta name="theme-color" content="#120c0d">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Michroma&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Big+Shoulders+Display:wght@800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/viewer.css">
   <script src="js/config.js"></script>
   <script type="importmap">
@@ -21,51 +21,47 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
-    body { background: var(--paper); color: var(--text); font-family: var(--sans); overflow: hidden; -webkit-font-smoothing: antialiased; }
+    body { background: var(--void); color: var(--bone); font: 400 12px/1.4 var(--body); overflow: hidden; -webkit-font-smoothing: antialiased; }
+    [hidden] { display: none !important; }
     #stage { position: fixed; inset: 0; }
     .bar {
-      position: fixed; z-index: 10; top: 0; left: 0; right: 0; height: 56px;
-      display: flex; align-items: center; gap: 16px; padding: 0 16px; padding-top: env(safe-area-inset-top, 0px);
-      pointer-events: none;
+      position: fixed; z-index: 10; top: 0; left: 0; right: 0; height: 44px; display: flex; align-items: center; gap: 14px;
+      padding: env(safe-area-inset-top, 0px) 10px 0 12px; pointer-events: none;
+      background: linear-gradient(rgba(10, 5, 6, 0.75), rgba(10, 5, 6, 0));
     }
     .bar > * { pointer-events: auto; }
-    .mark { display: flex; align-items: baseline; gap: 10px; text-decoration: none; color: var(--ink); }
-    .mark b { font: 400 13px/1 var(--wide); letter-spacing: .5em; }
-    .mark small { font: 500 9.5px/1 var(--sans); letter-spacing: .3em; color: var(--muted); }
+    .mark { display: flex; align-items: center; gap: 7px; text-decoration: none; color: var(--bone); }
+    .mark img { width: 18px; height: 18px; border-radius: 3px; }
+    .mark b { font: 800 17px/1 var(--display); letter-spacing: 0.08em; }
+    .mark small { font: 600 9.5px/1 var(--body); letter-spacing: 0.18em; color: var(--ember); }
     .title { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 10px; justify-content: center; }
-    .title h1 { font: 400 11px/1 var(--wide); letter-spacing: .22em; text-transform: uppercase; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .title span { font: 500 11px/1 var(--mono); color: var(--faint); white-space: nowrap; }
-    .actions { display: flex; gap: 6px; margin-left: auto; }
-    [hidden] { display: none !important; }
-    .panel {
-      position: fixed; z-index: 9; background: var(--glass); border: 1px solid var(--line); box-shadow: var(--shadow);
-      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-    }
-    .panel-h { display: flex; justify-content: space-between; align-items: center; padding: 12px 12px 8px; font: 500 10px/1 var(--sans); letter-spacing: .22em; text-transform: uppercase; color: var(--muted); }
-    #treePanel { left: 16px; top: 64px; width: 280px; max-height: calc(100% - 200px); overflow: auto; }
-    #treePanel.hide { display: none; }
-    #selPanel { right: 16px; top: 190px; width: 280px; padding: 14px; max-height: calc(100% - 260px); overflow: auto; }
-    #selPanel.hide { display: none; }
-    #tb { position: fixed; z-index: 10; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
-    #steps { position: fixed; z-index: 9; left: 50%; transform: translateX(-50%); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); width: min(760px, calc(100% - 32px)); }
-    .stats { position: fixed; z-index: 8; left: 16px; bottom: 22px; font: 500 10.5px/1.6 var(--mono); color: var(--faint); pointer-events: none; }
+    .title h1 { font-weight: 500; font-size: 13px; color: var(--bone); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .title span { font: 500 11px/1 var(--mono); color: var(--ash); white-space: nowrap; }
+    .actions { display: flex; gap: 4px; margin-left: auto; }
+    .panel { position: fixed; z-index: 9; border-radius: 6px; background: var(--glass); border: 1px solid var(--line); box-shadow: var(--shadow); backdrop-filter: blur(12px); }
+    .panel-h { display: flex; justify-content: space-between; align-items: center; height: 26px; padding: 0 10px; font-weight: 500; color: var(--bone); border-bottom: 1px solid var(--line); }
+    .panel-h span:last-child { font: 500 10.5px/1 var(--mono); color: var(--smoke); }
+    #treePanel { left: 12px; top: 52px; width: 270px; max-height: calc(100% - 210px); overflow: auto; }
+    #selPanel { right: 12px; top: 170px; width: 270px; padding: 10px; max-height: calc(100% - 300px); overflow: auto; }
+    .hide { display: none; }
+    #tb { position: fixed; z-index: 10; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+    #steps { position: fixed; z-index: 9; left: 50%; transform: translateX(-50%); bottom: calc(62px + env(safe-area-inset-bottom, 0px)); width: min(760px, calc(100% - 24px)); border-radius: 6px; overflow: hidden; border: 1px solid var(--line); box-shadow: var(--shadow); }
+    .stats { position: fixed; z-index: 8; left: 14px; bottom: 18px; font: 500 10.5px/1.6 var(--mono); color: var(--smoke); pointer-events: none; }
     .msg { position: fixed; inset: 0; display: grid; place-items: center; z-index: 20; pointer-events: none; }
-    .msg div { padding: 14px 18px; background: #fff; border: 1px solid var(--line); box-shadow: var(--shadow); font-size: 13px; color: var(--muted); }
-    .loading { position: fixed; left: 50%; top: 50%; width: 120px; height: 1px; transform: translate(-50%, -50%); background: var(--line); overflow: hidden; z-index: 20; }
-    .loading::after { content: ""; position: absolute; inset: 0; width: 40%; background: var(--ink); animation: ld 1s ease-in-out infinite; }
+    .msg div { padding: 12px 16px; border-radius: 6px; background: var(--panel); border: 1px solid var(--line_strong); box-shadow: var(--shadow); font-size: 12.5px; color: var(--ash); }
+    .loading { position: fixed; left: 50%; top: 50%; width: 120px; height: 2px; transform: translate(-50%, -50%); background: var(--line); overflow: hidden; z-index: 20; }
+    .loading::after { content: ""; position: absolute; inset: 0; width: 40%; background: var(--ember); animation: ld 1s ease-in-out infinite; }
     @keyframes ld { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
-    body.embed, body.embed #stage { background: transparent; }
-    body.embed .vc-viewer { background: transparent; }
-    body.embed .loading { width: 64px; opacity: .5; }
+    body.embed, body.embed #stage, body.embed .vc-viewer { background: transparent; }
+    body.embed .loading { width: 64px; opacity: 0.5; }
     body.embed .bar, body.embed .panel, body.embed #tb, body.embed .stats, body.embed #steps { display: none !important; }
     @media (max-width: 640px) {
-      .title { display: none; }
-      .mark small { display: none; }
-      .actions .vc-btn span { display: none; }
-      #treePanel { left: 8px; right: 8px; width: auto; top: 60px; max-height: 40%; }
-      #selPanel { left: 8px; right: 8px; width: auto; top: auto; bottom: 136px; max-height: 34%; }
+      .title, .mark small, .actions .vc-btn span { display: none; }
+      #treePanel { left: 8px; right: 8px; width: auto; max-height: 40%; }
+      #selPanel { left: 8px; right: 8px; width: auto; top: auto; bottom: 150px; max-height: 34%; }
       #tb { max-width: calc(100% - 16px); overflow-x: auto; }
-      #steps { bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
+      #steps { bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+      .vc-steps-meta, .vc-steps-n { display: none; }
       .stats { display: none; }
     }
   </style>
@@ -73,7 +69,7 @@
 <body>
   <div id="stage"></div>
   <header class="bar">
-    <a class="mark" href="index.html" target="_top"><b>BISCAD</b><small>CLOUD</small></a>
+    <a class="mark" href="index.html" target="_top"><img src="favicon.svg" alt=""><b>BISCAD</b><small>VIEWER</small></a>
     <div class="title"><h1 id="name">Loading</h1><span id="sub"></span></div>
     <div class="actions">
       <button class="vc-btn" id="treeBtn" title="Parts">
@@ -112,14 +108,14 @@
     }
 
     const viewer = new Viewer(document.getElementById('stage'), {
-      cube: !embed, cubeTop: 52,
+      cube: !embed, cubeTop: 44,
       transparent: embed, grid: !embed, autoRotate: embed || q.get('spin') === '1', fitMargin: embed ? 1.12 : 1,
       interactive: !embed || q.get('pick') === '1', shortcuts: !embed,
       measureProvider: (a, b, v) => api.post(`/v1/versions/${v}/measure`, { a, b }),
     });
     window.biscadViewer = viewer;
     if (!embed) {
-      mountToolbar(viewer, document.getElementById('tb'), ['select', 'measure', 'section', 'explode', '|', 'views', 'fit', 'projection', '|', 'render', 'bbox', 'screenshot', 'help']);
+      mountToolbar(viewer, document.getElementById('tb'));
       new PartTree(viewer, document.getElementById('tree'));
       new SelectionPanel(viewer, document.getElementById('sel'));
     }

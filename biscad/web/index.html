@@ -4,85 +4,45 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>BISCAD — The CAD kernel for agents</title>
-  <meta name="description" content="build123d + OpenCascade as a REST API and MCP server. Stable face ids, renders agents can see, build-step replay. Every call is a fraction of a cent.">
-  <meta name="theme-color" content="#fcfcfb">
+  <meta name="description" content="build123d and OpenCascade behind a REST API and an MCP server. Stable face ids, renders agents can see, build-step replay, design reports. Priced per build, not per seat.">
+  <meta name="theme-color" content="#0a0506">
+  <meta name="color-scheme" content="dark">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Geist+Mono:wght@400;500&family=Michroma&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@800;900&family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/site.css">
-  <!-- Background material: a first-time visitor always gets clay plaster. Returning
-       visitors roll (clay plaster 90%, the rare ones 5% each). Only the chosen
-       material's maps are preloaded so it appears on first view. -->
-  <script>
-    (() => {
-      const pool = [
-        ["Clay plaster", "clay_plaster", 90],
-        ["Brushed concrete", "brushed_concrete", 5],
-        ["Aggregate", "concrete_floor_01", 5],
-      ];
-      let returning = false;
-      try {
-        returning = localStorage.getItem("biscad-visited") === "1";
-        localStorage.setItem("biscad-visited", "1");
-      } catch (e) {}
-      let pick = pool[0];
-      if (returning) {
-        let r = Math.random() * 100;
-        for (const p of pool) { if ((r -= p[2]) < 0) { pick = p; break; } }
-      }
-      window.BISCAD_MATERIAL = pick[0];
-      for (const f of ["normal", "orm"]) {
-        const l = document.createElement("link");
-        l.rel = "preload"; l.as = "image"; l.fetchPriority = "high";
-        l.href = `assets/textures/pbr/${pick[1]}/${f}.jpg`;
-        document.head.appendChild(l);
-      }
-    })();
-  </script>
+  <link rel="preload" as="image" href="textures/brushed_metal/normal.jpg">
 </head>
 <body>
-  <canvas id="material" aria-hidden="true"></canvas>
-  <canvas id="stars" aria-hidden="true"></canvas>
+  <canvas class="surface" aria-hidden="true"></canvas>
 
   <header class="top">
-    <a class="wordmark" href="#top" aria-label="BISCAD">BISCAD</a>
+    <a class="wordmark" href="#top" aria-label="BISCAD home"><svg class="wordmark_svg" viewBox="0 0 1008.79 208.0" aria-hidden="true"><path fill="#efe6e1" d="M0 204V200.97L5.45 198.85Q11.52 196.42 13.79 192.79Q16.06 189.15 16.06 183.09V24.91Q16.06 18.55 13.79 14.91Q11.52 11.27 5.45 9.15L0 7.03V4H86.97Q123.94 4 140.3 17.48Q156.67 30.97 156.67 51.58Q156.67 67.03 144.7 79.61Q132.73 92.18 103.64 97.33Q136.97 100.97 152.42 114.76Q167.88 128.55 167.88 148.24Q167.88 157.94 163.64 167.79Q159.39 177.64 149.24 185.82Q139.09 194 121.52 199Q103.94 204 76.97 204ZM60.91 97.03H73.94Q94.24 97.03 103.18 87.64Q112.12 78.24 112.12 54.91Q112.12 30.67 103.94 20.36Q95.76 10.06 77.27 10.06H60.91ZM60.91 197.94H76.06Q98.79 197.94 109.85 185.82Q120.91 173.7 120.91 147.94Q120.91 123.7 110.3 113.39Q99.7 103.09 75.45 103.09H60.91ZM184.24 204V200.97L190.3 198.55Q196.36 196.42 198.33 192.79Q200.3 189.15 200.3 183.09V24.91Q200.3 18.85 198.48 15.21Q196.67 11.58 190.3 9.45L184.24 7.03V4H262.12V7.03L256.06 9.45Q250 11.58 248.03 15.21Q246.06 18.85 246.06 24.91V183.09Q246.06 189.15 248.03 192.64Q250 196.12 256.06 198.55L262.12 200.97V204ZM343.64 209.45Q326.97 209.45 309.7 205.36Q292.42 201.27 280.91 194.61L282.42 153.39H285.45L294.85 173.09Q299.09 181.58 303.94 188.09Q308.79 194.61 317.27 198.24Q323.33 201.27 328.94 202.33Q334.55 203.39 341.52 203.39Q360 203.39 370.76 193.39Q381.52 183.39 381.52 167.64Q381.52 152.79 374.24 144.45Q366.97 136.12 350.91 128.24L338.48 122.79Q312.42 111.27 297.73 96.27Q283.03 81.27 283.03 56.42Q283.03 38.55 292.27 25.52Q301.52 12.48 318.03 5.52Q334.55 -1.45 356.67 -1.45Q372.73 -1.45 387.12 2.79Q401.52 7.03 412.12 14.3L410.3 50.67H407.27L394.85 27.94Q389.7 17.33 384.55 12.94Q379.39 8.55 372.73 6.73Q368.79 5.52 365.45 5.06Q362.12 4.61 356.97 4.61Q341.52 4.61 330.91 13.55Q320.3 22.48 320.3 37.64Q320.3 53.09 328.48 62.33Q336.67 71.58 352.42 78.85L366.36 84.91Q395.45 97.64 408.18 112.03Q420.91 126.42 420.91 149.15Q420.91 175.82 400.76 192.64Q380.61 209.45 343.64 209.45ZM543.64 209.45Q514.24 209.45 490.45 197.48Q466.67 185.52 452.73 161.88Q438.79 138.24 438.79 104Q438.79 77.94 447.27 58.24Q455.76 38.55 470.45 25.21Q485.15 11.88 504.39 5.21Q523.64 -1.45 545.15 -1.45Q562.42 -1.45 576.97 2.48Q591.52 6.42 604.24 13.39L605.45 50.67H602.42L587.27 26.42Q584.24 20.67 580.61 15.97Q576.97 11.27 571.52 8.85Q566.97 6.73 562.58 5.67Q558.18 4.61 551.52 4.61Q533.94 4.61 519.55 14Q505.15 23.39 496.52 45.06Q487.88 66.73 487.88 104.3Q487.88 141.58 496.06 163.24Q504.24 184.91 518.33 194.15Q532.42 203.39 550 203.39Q559.7 203.39 565.45 202.03Q571.21 200.67 576.97 197.94Q582.73 195.52 585.76 190.82Q588.79 186.12 591.21 180.67L604.55 150.97H607.58L606.67 194.3Q593.94 200.97 578.18 205.21Q562.42 209.45 543.64 209.45ZM620.91 204V200.97L628.48 198.24Q634.55 195.82 637.88 192.33Q641.21 188.85 643.33 182.48L705.76 3.39H731.52L793.03 183.7Q795.45 190.36 798.48 193.85Q801.52 197.33 807.88 199.76L811.52 200.97V204H734.55V200.97L739.09 199.45Q745.45 197.03 746.82 192.64Q748.18 188.24 746.36 182.18L732.12 138.55H664.85L650.3 181.27Q648.18 187.94 648.94 191.88Q649.7 195.82 656.06 198.24L662.73 200.97V204ZM666.97 132.48H730.3L699.7 38.24ZM825.15 204V200.97L831.52 198.55Q841.21 194.61 841.21 183.09V24.91Q841.21 12.79 831.52 9.45L825.15 7.03V4H905.15Q937.27 4 960.45 15.97Q983.64 27.94 996.21 50.21Q1008.79 72.48 1008.79 103.7Q1008.79 135.52 995.15 157.94Q981.52 180.36 957.12 192.18Q932.73 204 899.7 204ZM886.67 197.94H899.7Q921.52 197.94 934.85 189.3Q948.18 180.67 954.39 160.21Q960.61 139.76 960.61 104Q960.61 68.24 954.39 47.79Q948.18 27.33 935.15 18.7Q922.12 10.06 900.91 10.06H886.67Z"/></svg></a>
+    <nav class="top_nav" aria-label="Main">
+      <a href="studio.html">Studio</a>
+      <a href="docs.html">Docs</a>
+      <a class="wide_only" href="#pricing">Pricing</a>
+      <a class="btn btn_small" href="#key">Get a key</a>
+    </nav>
   </header>
 
-  <nav class="dock" aria-label="Quick links">
-    <a href="studio.html" aria-label="Studio" data-tip="Studio">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-    </a>
-    <a href="docs.html" aria-label="Docs" data-tip="Docs">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg>
-    </a>
-    <a href="docs.html#reference" aria-label="API reference" data-tip="API">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></svg>
-    </a>
-    <!-- TODO: real contact address -->
-    <a href="mailto:" aria-label="Contact" data-tip="Contact">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-    </a>
-  </nav>
-
   <main id="top">
-    <!-- 1 · Hero -->
-    <section class="hero">
-      <div class="wrap">
-        <h1 class="product-name">BISCAD</h1>
-        <p class="tagline">The CAD kernel for agents.</p>
-        <p class="sub">build123d + OpenCascade as an API and MCP server.<br> Every call is a fraction of a cent.</p>
-
-        <div class="cta-row">
-          <a class="btn btn-dark" href="studio.html">Open Studio</a>
-          <a class="btn" href="#key">Get an API key</a>
+    <section class="hero wrap">
+      <p class="eyebrow">CAD kernel API <i>/</i> MCP server <i>/</i> Studio</p>
+      <h1 class="hero_title">The CAD kernel <em>for agents.</em></h1>
+      <div class="hero_foot">
+        <p class="lede">BISCAD runs build123d on OpenCascade behind a REST API and an MCP server. Your agent sends a script. It gets a real B-rep, renders it can see, and a STEP file. You pay per build, not per seat.</p>
+        <div class="cta_row">
+          <a class="btn btn_primary" href="studio.html">Open the studio</a>
+          <a class="btn" href="#key">Get a free key</a>
         </div>
+      </div>
 
-        <div class="viewer-frame" id="hero-viewer">
-          <span class="frame-tag tl"><span class="dot"></span>Live · Quadruped, 23 parts</span>
-          <span class="frame-tag br">p0/f3</span>
-          <div class="placeholder">
-            <!-- Line drawing of the leg: hip, thigh, knee, shin, foot -->
+      <div class="bezel" id="hero-viewer">
+        <span class="bezel_tag bezel_tag_top"><span class="led"></span>Live · Quadruped · 23 parts</span>
+        <div class="screen">
+          <div class="screen_placeholder">
             <svg aria-hidden="true" viewBox="0 0 200 240" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round">
               <circle class="draw" pathLength="1" cx="70" cy="40" r="26"/>
               <path class="draw" pathLength="1" d="M58 62 L104 124 L124 112 L82 52"/>
@@ -90,157 +50,139 @@
               <path class="draw" pathLength="1" d="M108 146 L82 206 L98 212 L126 148"/>
               <circle class="draw" pathLength="1" cx="88" cy="214" r="10"/>
             </svg>
-            <span class="label">Loading the live viewer</span>
+            <span class="screen_label">Loading the live viewer</span>
           </div>
           <iframe title="Live 3D viewer: 23-part quadruped robot" loading="lazy" data-src="view.html?sample=quadruped&amp;embed=1"></iframe>
         </div>
+      </div>
 
+      <dl class="specs">
+        <div><dt>~0.2<small>s</small></dt><dd>Median build, simple parts</dd></div>
+        <div><dt>20</dt><dd>MCP tools. Renders come back as images</dd></div>
+        <div><dt>$0</dt><dd>To start. No card</dd></div>
+        <div><dt>4,000<small>×</small></dt><dd><a href="#pricing">Less per call than the Onshape API*</a></dd></div>
+      </dl>
+    </section>
+
+    <section class="block wrap" id="features">
+      <header class="block_head">
+        <span class="index">01 — Agents</span>
+        <h2>Agents write the part. You see what they did.</h2>
+        <p>A real B-rep kernel with an interface for models, and outputs for the people who supervise them.</p>
+      </header>
+      <div class="features">
+        <article class="card"><span class="card_index">A</span><h3>Code is the model</h3><p>Every part is a build123d program. Declare <code>params = {...}</code> and override any value per call. You get configurations with no extra work.</p></article>
+        <article class="card"><span class="card_index">B</span><h3>Stable face ids</h3><p>Faces and edges get ids like <code>p0/f3</code>. The viewer, the API and MCP use the same id. Click a face and paste it into a prompt.</p></article>
+        <article class="card"><span class="card_index">C</span><h3>Agents can see</h3><p>Headless renders with face ids drawn on. Four views in one image. The model checks its work before it tells you it is done.</p></article>
+        <article class="card"><span class="card_index">D</span><h3>Text to CAD</h3><p>Send a sentence to <code>POST /v1/agent</code>. Claude writes the script, the kernel builds it, Claude reads the renders and fixes errors.</p></article>
+        <article class="card"><span class="card_index">E</span><h3>Real B-rep</h3><p>OpenCascade solids, not meshes. Export STEP for Fusion or SolidWorks. Measure, section, check mass, run DFM and diff two versions.</p></article>
+        <article class="card"><span class="card_index">F</span><h3>Nothing is lost</h3><p>Every build is a version with a parent. Branch from any version. Diff any two. Import STEP, BREP or STL to start from a supplier part.</p></article>
       </div>
     </section>
 
-    <!-- 2 · Stats -->
-    <div class="wrap">
-      <div class="stats">
-        <div class="stat">
-          <div class="value">~0.2<span class="unit">s</span></div>
-          <span class="label">Median build<span class="wide-only">, simple parts</span></span>
-        </div>
-        <div class="stat">
-          <div class="value">$0</div>
-          <span class="label">To start<span class="wide-only"> · no card</span></span>
-        </div>
-        <div class="stat">
-          <div class="value">1000<span class="unit">×</span></div>
-          <span class="label"><a href="#pricing">Cheaper per call<span class="wide-only"><br>than the Onshape API</span>*</a></span>
-        </div>
-      </div>
-    </div>
-
-    <!-- 3 · Built for agents -->
-    <section class="block" id="features">
-      <div class="wrap">
-        <div class="block-head">
-          <span class="label">Built for agents</span>
-          <h2>Agents write the part. You see what they did.</h2>
-          <p>A real B-rep kernel with an interface designed for models, and outputs designed for the humans supervising them.</p>
-        </div>
-
-        <div class="features">
-          <div class="feature">
-            <span class="num">01</span>
-            <h3>Code is the model</h3>
-            <p>Every part is a build123d program. Declare <code>params = {...}</code> and each API call can override them. Configurations for free.</p>
-            <div class="chips"><span class="chip">build123d</span><span class="chip">params</span></div>
-          </div>
-          <div class="feature">
-            <span class="num">02</span>
-            <h3>Stable references</h3>
-            <p>Faces and edges get ids like <code>p0/f3</code>. The same id in the viewer, the API and MCP. Click a face, paste it into a prompt.</p>
-            <div class="chips"><span class="chip">p0/f3</span><span class="chip">p1/e7</span></div>
-          </div>
-          <div class="feature">
-            <span class="num">03</span>
-            <h3>Agents can see</h3>
-            <p>Headless renders with face ids drawn on. A four-view grid in one image. The model checks its own work before it tells you it's done.</p>
-            <div class="chips"><span class="chip">render.png</span><span class="chip">render-grid.png</span></div>
-          </div>
-          <div class="feature">
-            <span class="num">04</span>
-            <h3>Oversight built in</h3>
-            <p>Replay the build step by step, each step in plain English. Auto-generated design reports and explainer GIFs. Understand the output at a glance.</p>
-            <div class="chips"><span class="chip">steps</span><span class="chip">report</span><span class="chip">explainer.gif</span></div>
-          </div>
-          <div class="feature">
-            <span class="num">05</span>
-            <h3>Real B-rep</h3>
-            <p>OpenCascade solids, not meshes. Export STEP for Fusion or SolidWorks. Mass properties, sections, measurements, DFM checks and geometric diffs.</p>
-            <div class="chips"><span class="chip">STEP</span><span class="chip">STL</span><span class="chip">GLB</span><span class="chip">3MF</span><span class="chip">BREP</span><span class="chip">SVG</span><span class="chip">DXF</span></div>
-          </div>
-          <div class="feature">
-            <span class="num">06</span>
-            <h3>Versioned documents</h3>
-            <p>Every build is a version with a parent. Branch from any point, diff any two. Nothing an agent does is lost.</p>
-            <div class="chips"><span class="chip">versions</span><span class="chip">diff</span></div>
-          </div>
-        </div>
-
-        <!-- Build-step replay demo (real numbers from the flange example) -->
-        <div class="replay-head">
-          <div><span class="label">Build-step replay</span><h3>Read how the part was built.</h3></div>
-          <p>Every operation, in plain English, with the volume and face count after it. Click a step.</p>
-        </div>
-        <div class="replay" id="replay">
-          <ol class="replay-steps">
-            <li data-line="0">Add a cylinder, Ø90 × 8 mm, on the XY plane.<span class="meta">50,894 mm³ · 3 faces</span></li>
-            <li data-line="1">Add a hub, Ø46 × 28 mm, on the same axis.<span class="meta">84,132 mm³ · 5 faces</span></li>
-            <li data-line="2">Fillet the hub root, radius 4 mm.<span class="meta">84,647 mm³ · 6 faces</span></li>
-            <li data-line="3">Cut a Ø22 mm bore through the centre.<span class="meta">74,004 mm³ · 7 faces</span></li>
-            <li data-line="4">Cut 6 counterbored M6 holes on a Ø72 mm circle.<span class="meta">71,267 mm³ · 25 faces</span></li>
-            <li data-line="5">Chamfer the top edges, 1 mm.<span class="meta">71,160 mm³ · 27 faces</span></li>
-          </ol>
-          <div class="code replay-code">
-            <div class="code-bar"><span class="title">flange.py · build-step replay</span></div>
+    <section class="block wrap" id="oversight">
+      <header class="block_head">
+        <span class="index">02 — Oversight</span>
+        <h2>Read how the part was built.</h2>
+        <p>Every operation, in plain English, with the volume and face count after it. Select a step.</p>
+      </header>
+      <div class="replay" id="replay">
+        <ol class="replay_steps">
+          <li data-line="0">Add a cylinder, Ø90 × 8 mm, on the XY plane.<span class="meta">50,894 mm³ · 3 faces</span></li>
+          <li data-line="1">Add a hub, Ø46 × 28 mm, on the same axis.<span class="meta">84,132 mm³ · 5 faces</span></li>
+          <li data-line="2">Fillet the hub root, radius 4 mm.<span class="meta">84,647 mm³ · 6 faces</span></li>
+          <li data-line="3">Cut a Ø22 mm bore through the centre.<span class="meta">74,004 mm³ · 7 faces</span></li>
+          <li data-line="4">Cut 6 counterbored M6 holes on a Ø72 mm circle.<span class="meta">71,267 mm³ · 25 faces</span></li>
+          <li data-line="5">Chamfer the top edges, 1 mm.<span class="meta">71,160 mm³ · 27 faces</span></li>
+        </ol>
+        <div class="code">
+          <div class="code_bar"><span class="title">flange.py · build-step replay</span></div>
 <pre><code><span class="ln" data-line="0">Cylinder(<span class="n">45</span>, <span class="n">8</span>, align=BASE)</span><span class="ln" data-line="1">Cylinder(<span class="n">23</span>, <span class="n">28</span>, align=BASE)</span><span class="ln" data-line="2">fillet(hub_root, <span class="n">4</span>)</span><span class="ln" data-line="3">Hole(<span class="n">11</span>)</span><span class="ln" data-line="4"><span class="k">with</span> PolarLocations(<span class="n">36</span>, <span class="n">6</span>):
     CounterBoreHole(<span class="n">3.3</span>, <span class="n">5.5</span>, <span class="n">3</span>)</span><span class="ln" data-line="5">chamfer(top_edges, <span class="n">1</span>)</span></code></pre>
-            <div class="endpoint-hint"><b>GET</b> /v1/versions/{vid}/steps · MCP <b>get_build_steps</b></div>
-          </div>
+          <div class="endpoint_hint"><b>GET</b> /v1/versions/{vid}/steps · MCP <b>get_build_steps</b></div>
         </div>
+      </div>
+      <div class="table_scroll">
+        <table class="spec_table">
+          <tbody>
+            <tr><th scope="row"><b>POST</b> /v1/agent</th><td>Text to CAD. Up to 4 build-and-check rounds. Each round is a real version.</td></tr>
+            <tr><th scope="row"><b>GET</b> …/render-grid.png</th><td>Front, top, right and iso in one image, with face ids.</td></tr>
+            <tr><th scope="row"><b>GET</b> …/report</th><td>HTML design report: renders, dimensions, mass, steps, params, DFM notes.</td></tr>
+            <tr><th scope="row"><b>GET</b> …/explainer.gif</th><td>Captioned build animation. Put it in a pull request.</td></tr>
+            <tr><th scope="row"><b>GET</b> …/interference</th><td>Clashes between parts, with the overlap volume in mm³.</td></tr>
+            <tr><th scope="row"><b>GET</b> …/bom</th><td>Bill of materials: name, quantity, size in mm, volume.</td></tr>
+          </tbody>
+        </table>
       </div>
     </section>
 
-    <!-- 4 · MCP -->
-    <section class="block" id="mcp">
-      <div class="wrap">
-        <div class="block-head">
-          <span class="label">MCP</span>
-          <h2>One line in Claude Code.</h2>
-          <p>Fourteen tools: build, render, measure, section, check, export, diff. Renders come back as images, so the model sees the part.</p>
+    <section class="block wrap" id="versus">
+      <header class="block_head">
+        <span class="index">03 — BISCAD vs Onshape</span>
+        <h2>A year of API calls, gone before lunch.</h2>
+        <p>Onshape Professional includes 5,000 API calls per user per year. An agent that calls once every 2 s uses all of them in 2 h 47 min.</p>
+      </header>
+      <div class="race" aria-label="One working day for an agent that calls the API every 2 seconds">
+        <div class="race_scale"><span>08:00</span><span>10:00</span><span>12:00</span><span>14:00</span><span>16:00</span><span>18:00</span></div>
+        <div class="race_lane race_lane_onshape">
+          <span class="race_name">Onshape Professional</span>
+          <div class="race_track"><div class="race_bar" style="--race_end: 27.8%"></div><span class="race_note" style="--race_end: 27.8%">10:47 · Allowance used. See you next year.</span></div>
         </div>
-        <div class="mcp-grid">
-          <div class="code">
-            <div class="code-bar"><span class="title">Claude Code</span><button class="copy" type="button" data-copy aria-label="Copy command"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy-label">Copy</span></button></div>
-<pre><code><span class="c"># drop --header to use the anonymous playground quota</span>
+        <div class="race_lane race_lane_biscad">
+          <span class="race_name">BISCAD Pro</span>
+          <div class="race_track"><div class="race_bar" style="--race_end: 100%"></div><span class="race_note race_note_end">Still building at 18:00. Lasts 55 h a month, for $12.</span></div>
+        </div>
+      </div>
+      <p class="aside">$2,500 a year buys one Onshape seat. Agents are not seats.</p>
+    </section>
+
+    <section class="block wrap" id="mcp">
+      <header class="block_head">
+        <span class="index">04 — MCP</span>
+        <h2>One line in Claude Code.</h2>
+        <p>Twenty tools: build, render, measure, section, check, interference, BOM, export, diff. Renders come back as images, so the model sees the part.</p>
+      </header>
+      <div class="pair">
+        <div class="code">
+          <div class="code_bar"><span class="title">Claude Code</span><button class="copy" type="button" data-copy aria-label="Copy command"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy_label">Copy</span></button></div>
+<pre><code><span class="c"># remove --header to use the anonymous playground quota</span>
 claude mcp add --transport http biscad \
-  <span class="host-mcp">https://api.biscad.dev/mcp</span> \
-  --header <span class="s">"Authorization: Bearer <span class="api-key">bsc_...</span>"</span>
+  <span class="host_mcp">https://api.biscad.dev/mcp</span> \
+  --header <span class="s">"Authorization: Bearer <span class="api_key">bsc_...</span>"</span>
 
 <span class="c"># then ask: "build a 60 mm bracket with four M6 holes,
 #  render it, and export STEP"</span></code></pre>
-          </div>
-          <div class="code">
-            <div class="code-bar"><span class="title">Claude Desktop · Cursor</span><button class="copy" type="button" data-copy aria-label="Copy JSON config"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy-label">Copy</span></button></div>
+        </div>
+        <div class="code">
+          <div class="code_bar"><span class="title">Claude Desktop · Cursor</span><button class="copy" type="button" data-copy aria-label="Copy JSON config"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy_label">Copy</span></button></div>
 <pre><code>{
   <span class="k">"mcpServers"</span>: {
     <span class="k">"biscad"</span>: {
-      <span class="k">"url"</span>: <span class="s">"<span class="host-mcp">https://api.biscad.dev/mcp</span>"</span>,
-      <span class="k">"headers"</span>: { <span class="k">"Authorization"</span>: <span class="s">"Bearer <span class="api-key">bsc_...</span>"</span> }
+      <span class="k">"url"</span>: <span class="s">"<span class="host_mcp">https://api.biscad.dev/mcp</span>"</span>,
+      <span class="k">"headers"</span>: { <span class="k">"Authorization"</span>: <span class="s">"Bearer <span class="api_key">bsc_...</span>"</span> }
     }
   }
 }</code></pre>
-          </div>
-          <p class="note">Anonymous calls work on the playground quota. Add a key for your own limits. Full tool list in the <a href="docs.html#mcp">docs</a>.</p>
         </div>
       </div>
+      <p class="note">Anonymous calls use the playground quota. Add a key for your own limits. See the full tool list in the <a href="docs.html#mcp">docs</a>.</p>
     </section>
 
-    <!-- 5 · Code -->
-    <section class="block" id="api">
-      <div class="wrap">
-        <div class="block-head">
-          <span class="label">REST API</span>
-          <h2>Script in. STEP out.</h2>
-          <p>Build a part, save it as a version, download the STEP. Three calls.</p>
-        </div>
-
-        <div class="code" data-tabs>
-          <div class="code-bar">
-            <div class="tabs" role="tablist" aria-label="Language">
-              <button class="tab" role="tab" type="button" aria-selected="true" aria-controls="ex-curl" id="t-curl">curl</button>
-              <button class="tab" role="tab" type="button" aria-selected="false" aria-controls="ex-py" id="t-py" tabindex="-1">Python</button>
-              <button class="tab" role="tab" type="button" aria-selected="false" aria-controls="ex-js" id="t-js" tabindex="-1">JavaScript</button>
-            </div>
-            <button class="copy" type="button" data-copy aria-label="Copy code sample"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy-label">Copy</span></button>
+    <section class="block wrap" id="api">
+      <header class="block_head">
+        <span class="index">05 — REST API</span>
+        <h2>Script in. STEP out.</h2>
+        <p>Build a part, save it as a version, download the STEP. Three calls.</p>
+      </header>
+      <div class="code" data-tabs>
+        <div class="code_bar">
+          <div class="tabs" role="tablist" aria-label="Language">
+            <button class="tab" role="tab" type="button" aria-selected="true" aria-controls="ex-curl" id="t-curl">curl</button>
+            <button class="tab" role="tab" type="button" aria-selected="false" aria-controls="ex-py" id="t-py" tabindex="-1">Python</button>
+            <button class="tab" role="tab" type="button" aria-selected="false" aria-controls="ex-js" id="t-js" tabindex="-1">JavaScript</button>
           </div>
+          <button class="copy" type="button" data-copy aria-label="Copy code sample"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy_label">Copy</span></button>
+        </div>
 <pre role="tabpanel" id="ex-curl" aria-labelledby="t-curl"><code><span class="c"># 1 · build (stateless): summary + scene, nothing stored</span>
 curl -s <span class="host">https://api.biscad.dev</span>/v1/build \
   -H <span class="s">"Authorization: Bearer $BISCAD_KEY"</span> \
@@ -301,132 +243,102 @@ console.log(built.ok, built.summary.volume);
 <span class="c">// 3 · export STEP</span>
 <span class="k">const</span> step = <span class="k">await</span> fetch(<span class="s">`${API}/v1/versions/${version.id}/export/step`</span>, { headers: H });
 <span class="k">await</span> require(<span class="s">"fs/promises"</span>).writeFile(<span class="s">"plate.step"</span>, Buffer.from(<span class="k">await</span> step.arrayBuffer()));</code></pre>
-        </div>
       </div>
     </section>
 
-    <!-- 6 · Pricing -->
-    <section class="block" id="pricing">
-      <div class="wrap">
-        <div class="block-head">
-          <span class="label">Pricing</span>
-          <h2>Priced per build, not per seat.</h2>
-          <p>An agent iterating on a part makes hundreds of calls an hour. That should cost cents.</p>
+    <section class="block wrap" id="pricing">
+      <header class="block_head">
+        <span class="index">06 — Pricing</span>
+        <h2>Priced per build, not per seat.</h2>
+        <p>An agent that iterates on a part makes hundreds of calls an hour. That costs cents here.</p>
+      </header>
+      <div class="tiers">
+        <div class="card tier">
+          <span class="tier_name">Free</span>
+          <div class="tier_price">$0</div>
+          <div class="tier_per">No card</div>
+          <ul><li>2,000 builds / month</li><li>10 text-to-CAD runs / month</li><li>All export formats</li><li>MCP server</li></ul>
+          <a class="btn" href="#key">Get a key</a>
         </div>
+        <div class="card tier tier_featured">
+          <span class="tier_name">Pro</span>
+          <div class="tier_price">$12</div>
+          <div class="tier_per">per month</div>
+          <ul><li>100,000 builds / month</li><li>3-minute builds</li><li>Priority workers</li><li>Everything in Free</li></ul>
+          <a class="btn btn_primary" href="#key">Start free, upgrade later</a>
+        </div>
+        <div class="card tier">
+          <span class="tier_name">Scale</span>
+          <div class="tier_price">$0.0004</div>
+          <div class="tier_per">per build-second</div>
+          <ul><li>No monthly cap</li><li>Pay for compute you use</li><li>Open source</li><li>Self-host for free</li></ul>
+          <a class="btn" href="docs.html#self-host">Self-host guide</a>
+        </div>
+      </div>
 
-        <div class="tiers">
-          <div class="tier">
-            <span class="name">Free</span>
-            <div class="price">$0</div>
-            <div class="per">No card</div>
-            <ul>
-              <li>2,000 builds / month</li>
-              <li>All export formats</li>
-              <li>MCP server</li>
-              <li>Versioned documents</li>
-            </ul>
-            <a class="btn" href="#key">Get a key</a>
-          </div>
-          <div class="tier featured">
-            <span class="name">Pro</span>
-            <div class="price">$12</div>
-            <div class="per">per month</div>
-            <ul>
-              <li>100,000 builds / month</li>
-              <li>3-minute builds</li>
-              <li>Priority workers</li>
-              <li>Everything in Free</li>
-            </ul>
-            <a class="btn btn-dark" href="#key">Start free, upgrade later</a>
-          </div>
-          <div class="tier">
-            <span class="name">Scale</span>
-            <div class="price">$0.0004</div>
-            <div class="per">per build-second</div>
-            <ul>
-              <li>No monthly cap</li>
-              <li>Pay for compute used</li>
-              <li>Self-host licence: free</li>
-              <li>Open source</li>
-            </ul>
-            <a class="btn" href="docs.html#self-host">Self-host guide</a>
-          </div>
-        </div>
+      <div class="table_scroll">
+        <table class="compare">
+          <thead><tr><th scope="col"></th><th scope="col" class="us">BISCAD Pro</th><th scope="col">Onshape Professional</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Price</th><td class="us">$12 / month</td><td>$2,500 / user / year</td></tr>
+            <tr><th scope="row">API allowance</th><td class="us">100,000 builds / month</td><td>5,000 calls / user / year</td></tr>
+            <tr><th scope="row">Cost per call, at the allowance</th><td class="us">≈ $0.00012</td><td>≈ $0.50</td></tr>
+            <tr><th scope="row">API on the free plan</th><td class="us">2,000 builds / month</td><td>No</td></tr>
+            <tr><th scope="row">MCP server</th><td class="us">All plans</td><td>Uses the same annual allowance</td></tr>
+            <tr><th scope="row">Kernel</th><td class="us">OpenCascade (open source)</td><td>Parasolid (proprietary)</td></tr>
+            <tr><th scope="row">Self-host</th><td class="us">Yes, one Docker command</td><td>No</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="footnote">* Onshape figures as of Oct 2026. Plan prices: <a href="https://www.onshape.com/en/pricing" rel="noopener">onshape.com/pricing</a> (Standard $1,500, Professional $2,500 per user per year; API access on paid plans). Annual API call limits: Onshape developer docs, <a href="https://onshape-public.github.io/docs/auth/limits/" rel="noopener">API limits</a> (2,500 per user on Standard, 5,000 per user on Professional, 10,000 per full user on Enterprise). A BISCAD build and an Onshape API call are not the same unit of work. One build often replaces several feature calls. We compare cost per call at each plan's included allowance. The 2 s agent loop above is an example rate.</p>
+    </section>
 
-        <div class="compare-wrap">
-          <span class="label">Against the Onshape API</span>
-          <div class="table-scroll">
-            <table class="compare">
-              <thead>
-                <tr><th scope="col"></th><th scope="col" class="us">BISCAD Pro</th><th scope="col">Onshape Professional</th></tr>
-              </thead>
-              <tbody>
-                <tr><th scope="row">Price</th><td class="us">$12 / month</td><td>$2,500 / user / year</td></tr>
-                <tr><th scope="row">API allowance</th><td class="us">100,000 builds / month</td><td>5,000 calls / user / year</td></tr>
-                <tr><th scope="row">Cost per call, at the allowance</th><td class="us">≈ $0.00012</td><td>≈ $0.50</td></tr>
-                <tr><th scope="row">Free tier API access</th><td class="us">2,000 builds / month</td><td>Not on the Free plan</td></tr>
-                <tr><th scope="row">MCP server</th><td class="us">Included, all plans</td><td>Draws on the same annual allowance</td></tr>
-                <tr><th scope="row">Kernel</th><td class="us">OpenCascade (open source)</td><td>Parasolid (proprietary)</td></tr>
-                <tr><th scope="row">Self-host</th><td class="us">Yes, one Docker command</td><td>No</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <p class="footnote">* Onshape figures as of Oct 2026: plan prices from <a href="https://www.onshape.com/en/pricing" rel="noopener">onshape.com/pricing</a> (Standard $1,500, Professional $2,500 per user per year; API access on paid plans). Annual API call limits from Onshape's developer docs, <a href="https://onshape-public.github.io/docs/auth/limits/" rel="noopener">API limits</a>: 2,500 per user (Standard), 5,000 per user (Professional), 10,000 per full user (Enterprise). A BISCAD build and an Onshape API call are not the same unit of work; one build often replaces several feature calls. Comparison is per call at each plan's included allowance.</p>
+    <section class="block wrap" id="key">
+      <header class="block_head">
+        <span class="index">07 — API key</span>
+        <h2>Get a key in five seconds.</h2>
+        <p>Free plan. No card. The key works for the REST API and MCP.</p>
+      </header>
+      <div class="card key_box">
+        <form class="key_form" id="key-form" novalidate>
+          <label class="sr_only" for="key-email">Email</label>
+          <input id="key-email" name="email" type="email" autocomplete="email" placeholder="you@company.com" required>
+          <button class="btn btn_primary" type="submit">Create key</button>
+        </form>
+        <p class="key_status" id="key-status" role="status" aria-live="polite"></p>
+        <div class="code key_result" id="key-result" hidden>
+          <div class="code_bar"><span class="title">Your API key · shown once</span><button class="copy" type="button" data-copy aria-label="Copy API key"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy_label">Copy</span></button></div>
+          <pre><code id="key-value"></code></pre>
         </div>
+        <p class="key_fine">Requests go to <code class="host">https://api.biscad.dev</code>.</p>
       </div>
     </section>
 
-    <!-- 7 · API key -->
-    <section class="block" id="key">
-      <div class="wrap">
-        <div class="block-head">
-          <span class="label">API key</span>
-          <h2>Get a key in five seconds.</h2>
-          <p>Free tier. No card. The key works for the REST API and MCP.</p>
-        </div>
-        <div class="key-box">
-          <form class="key-form" id="key-form" novalidate>
-            <label class="sr-only" for="key-email">Email</label>
-            <input id="key-email" name="email" type="email" autocomplete="email" placeholder="you@company.com" required>
-            <button class="btn btn-dark" type="submit">Create key</button>
-          </form>
-          <p class="key-status" id="key-status" role="status" aria-live="polite"></p>
-          <div class="code key-result" id="key-result" hidden>
-            <div class="code-bar"><span class="title">Your API key · shown once</span><button class="copy" type="button" data-copy aria-label="Copy API key"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy-label">Copy</span></button></div>
-            <pre><code id="key-value"></code></pre>
-          </div>
-          <p class="key-fine">Requests go to <code class="inline host">https://api.biscad.dev</code>.</p>
-        </div>
+    <section class="block wrap" id="faq">
+      <header class="block_head">
+        <span class="index">08 — Questions</span>
+        <h2>The short answers.</h2>
+      </header>
+      <div class="faq">
+        <details><summary>Is it really build123d?</summary><p>Yes. Your script runs on stock build123d and OpenCascade. A script that works on your machine works here, inside the sandbox. Allowed imports: build123d, numpy, math and the standard numeric modules. Scripts get no file or network access.</p></details>
+        <details><summary>Can it make a part from a sentence?</summary><p>Yes. Send <code>POST /v1/agent</code> with a prompt. Claude writes the script, the kernel builds it, and Claude checks the four-view render. You need an API key. The free plan includes 10 runs a month.</p></details>
+        <details><summary>Can I import STEP?</summary><p>Yes. <code>POST /v1/import</code> takes STEP, BREP or STL. It returns a document with stable face ids. You can then measure, section, render or change it.</p></details>
+        <details><summary>Is my code private?</summary><p>Yes. Documents are private to your API key on all plans. Each version has an id that nobody can guess, and it works as a share link. Each script runs in its own worker with memory and CPU limits.</p></details>
+        <details id="self-host"><summary>Can I self-host?</summary><p>Yes. BISCAD is open source. Run <code>docker run -p 8000:8000 biscad</code>. For a public URL, <code>./deploy/public.sh</code> opens a Cloudflare quick tunnel.</p></details>
+        <details><summary>Why is it so cheap?</summary><p>The kernel is open source, so there are no licence fees. Workers fork from a warm process, so a build costs a fraction of a CPU-second. Agents are not seats, so we do not charge per seat.</p></details>
+        <details><summary>Does it work with Claude, Cursor and ChatGPT?</summary><p>Yes. It works with any client that speaks MCP over HTTP: Claude Code, Claude Desktop, Cursor and ChatGPT connectors. Other tools can use the REST API and <a href="llms.txt">llms.txt</a>.</p></details>
       </div>
     </section>
-
-    <!-- 8 · FAQ -->
-    <section class="block" id="faq">
-      <div class="wrap">
-        <div class="block-head">
-          <span class="label">Questions</span>
-          <h2>The short answers.</h2>
-        </div>
-        <div class="faq">
-          <details><summary>Is it really build123d?</summary><div><p>Yes. Your script runs against stock build123d on OpenCascade. Anything that works locally works here, within the sandbox: allowed imports are build123d, bd_warehouse, numpy, math and the standard numeric modules. No file or network access.</p></div></details>
-          <details><summary>Can I import STEP?</summary><div><p>Yes. <code>POST /v1/import</code> takes STEP, BREP or STL and returns a document with stable face ids, ready to measure, section, render or modify.</p></div></details>
-          <details><summary>Is my code private?</summary><div><p>Documents are private to your API key on every plan. Each build gets an unguessable version id that works as a share link, so only people you give it to can view or export it. Scripts run in isolated forked workers with memory and CPU limits, and nothing is shared between jobs.</p></div></details>
-          <details id="self-host"><summary>Can I self-host?</summary><div><p>Yes. It's open source. One command: <code>docker run -p 8000:8000 biscad</code>. Want a public URL for your agents? <code>./deploy/public.sh</code> opens a Cloudflare quick tunnel.</p></div></details>
-          <details><summary>How is it so cheap?</summary><div><p>An open-source kernel, so no licence fees. Stateless workers forked from a warm process, so a build costs a fraction of a CPU-second. No per-seat pricing, because agents aren't seats.</p></div></details>
-          <details><summary>Does it work with Claude, Cursor and ChatGPT?</summary><div><p>Anything that speaks MCP over HTTP: Claude Code, Claude Desktop, Cursor, and ChatGPT connectors. For everything else there's the REST API and <a href="llms.txt">llms.txt</a>.</p></div></details>
-        </div>
-      </div>
-    </section>
-
-    <footer class="legal wrap">
-      <div><a href="studio.html">Studio</a><a href="docs.html">Docs</a><a href="llms.txt">llms.txt</a></div>
-      <div style="margin-top:12px">© 2026 BISCAD</div>
-    </footer>
   </main>
 
-  <script src="js/material.js"></script>
-  <script src="js/stars.js"></script>
+  <footer class="legal wrap">
+    <svg class="footer_logo" viewBox="0 0 1063.17 400" role="img" aria-label="BISCAD"><defs><clipPath id="biscad-logo-band-clip"><rect width="1063.17" height="400"/></clipPath></defs><g clip-path="url(#biscad-logo-band-clip)"><rect width="1063.17" height="400" fill="#f6f1ec"/><rect y="52.00" width="1063.17" height="296.00" fill="#8a0b1a"/><path fill="#f6f1ec" d="M-73.35 321.36V317.68L-66.73 315.11Q-59.37 312.17 -56.61 307.75Q-53.85 303.34 -53.85 295.98V104.02Q-53.85 96.29 -56.61 91.88Q-59.37 87.47 -66.73 84.89L-73.35 82.32V78.64H32.2Q77.07 78.64 96.93 95.01Q116.79 111.37 116.79 136.38Q116.79 155.13 102.26 170.4Q87.73 185.66 52.43 191.91Q92.88 196.32 111.64 213.06Q130.39 229.79 130.39 253.69Q130.39 265.46 125.24 277.41Q120.09 289.37 107.78 299.29Q95.46 309.22 74.13 315.29Q52.8 321.36 20.06 321.36ZM0.57 191.54H16.39Q41.03 191.54 51.88 180.14Q62.72 168.74 62.72 140.42Q62.72 111 52.8 98.5Q42.87 86 20.43 86H0.57ZM0.57 314H18.96Q46.54 314 59.97 299.29Q73.39 284.58 73.39 253.32Q73.39 223.9 60.52 211.4Q47.65 198.9 18.23 198.9H0.57ZM144.73 321.36V317.68L152.09 314.74Q159.44 312.17 161.84 307.75Q164.23 303.34 164.23 295.98V104.02Q164.23 96.66 162.02 92.25Q159.81 87.83 152.09 85.26L144.73 82.32V78.64H239.25V82.32L231.89 85.26Q224.54 87.83 222.15 92.25Q219.76 96.66 219.76 104.02V295.98Q219.76 303.34 222.15 307.57Q224.54 311.8 231.89 314.74L239.25 317.68V321.36ZM332.66 327.98Q312.43 327.98 291.47 323.01Q270.51 318.05 256.53 309.96L258.37 259.94H262.05L273.45 283.85Q278.6 294.15 284.48 302.05Q290.37 309.96 300.66 314.37Q308.02 318.05 314.82 319.34Q321.63 320.62 330.08 320.62Q352.52 320.62 365.57 308.49Q378.63 296.35 378.63 277.23Q378.63 259.21 369.8 249.1Q360.98 238.98 341.48 229.42L326.41 222.8Q294.78 208.83 276.94 190.62Q259.11 172.42 259.11 142.26Q259.11 120.56 270.32 104.75Q281.54 88.94 301.58 80.48Q321.63 72.02 348.47 72.02Q367.96 72.02 385.43 77.17Q402.9 82.32 415.77 91.14L413.57 135.27H409.89L394.81 107.69Q388.56 94.82 382.31 89.49Q376.05 84.16 367.96 81.95Q363.18 80.48 359.14 79.93Q355.09 79.38 348.84 79.38Q330.08 79.38 317.21 90.22Q304.34 101.07 304.34 119.46Q304.34 138.22 314.27 149.43Q324.2 160.65 343.32 169.48L360.24 176.83Q395.55 192.28 410.99 209.75Q426.44 227.21 426.44 254.8Q426.44 287.16 401.98 307.57Q377.53 327.98 332.66 327.98ZM569.86 327.98Q534.19 327.98 505.32 313.45Q476.45 298.93 459.54 270.24Q442.62 241.56 442.62 200Q442.62 168.37 452.92 144.47Q463.21 120.56 481.05 104.38Q498.89 88.2 522.24 80.11Q545.59 72.02 571.7 72.02Q592.66 72.02 610.32 76.8Q627.97 81.58 643.41 90.04L644.88 135.27H641.21L622.82 105.85Q619.14 98.87 614.73 93.17Q610.32 87.47 603.7 84.52Q598.18 81.95 592.85 80.66Q587.51 79.38 579.42 79.38Q558.09 79.38 540.63 90.78Q523.16 102.18 512.68 128.47Q502.2 154.77 502.2 200.37Q502.2 245.6 512.12 271.9Q522.05 298.19 539.15 309.41Q556.26 320.62 577.59 320.62Q589.35 320.62 596.34 318.97Q603.33 317.31 610.32 314Q617.3 311.06 620.98 305.36Q624.66 299.66 627.6 293.04L643.78 257H647.46L646.36 309.59Q630.91 317.68 611.79 322.83Q592.66 327.98 569.86 327.98ZM658.12 321.36V317.68L667.32 314.37Q674.67 311.43 678.72 307.2Q682.76 302.97 685.34 295.25L761.1 77.9H792.36L867.01 296.72Q869.95 304.81 873.63 309.04Q877.31 313.27 885.03 316.21L889.44 317.68V321.36H796.03V317.68L801.55 315.84Q809.27 312.9 810.93 307.57Q812.58 302.24 810.38 294.88L793.09 241.92H711.45L693.8 293.78Q691.22 301.87 692.14 306.65Q693.06 311.43 700.78 314.37L708.87 317.68V321.36ZM714.02 234.57H790.88L753.74 120.2ZM900.48 321.36V317.68L908.2 314.74Q919.97 309.96 919.97 295.98V104.02Q919.97 89.3 908.2 85.26L900.48 82.32V78.64H997.56Q1036.55 78.64 1064.68 93.17Q1092.81 107.69 1108.08 134.72Q1123.34 161.75 1123.34 199.63Q1123.34 238.25 1106.79 265.46Q1090.24 292.67 1060.63 307.02Q1031.03 321.36 990.94 321.36ZM975.13 314H990.94Q1017.42 314 1033.6 303.52Q1049.79 293.04 1057.33 268.22Q1064.86 243.4 1064.86 200Q1064.86 156.6 1057.33 131.78Q1049.79 106.96 1033.97 96.48Q1018.16 86 992.42 86H975.13Z"/></g></svg>
+    <nav aria-label="Footer"><a href="studio.html">Studio</a><a href="docs.html">Docs</a><a href="docs.html#reference">API reference</a><a href="llms.txt">llms.txt</a></nav>
+    <span>© 2026 BISCAD</span>
+  </footer>
+
   <script src="js/config.js"></script>
   <script src="js/site.js"></script>
+  <script type="module" src="js/surface.js"></script>
 </body>
 </html>

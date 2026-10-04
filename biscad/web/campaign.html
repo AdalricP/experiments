@@ -1,0 +1,848 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BISCAD Campaign</title>
+<meta name="description" content="Make CAD Great Again. The BISCAD launch creatives: posters, stories and banners with copy.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" crossorigin="anonymous" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  --void: #0a0506;
+  --char: #120c0d;
+  --panel: #1a1213;
+  --panel_raised: #231819;
+  --line: rgba(255, 214, 214, 0.08);
+  --line_strong: rgba(255, 214, 214, 0.16);
+  --bone: #efe6e1;
+  --ash: #a3938f;
+  --smoke: #6e605d;
+  --oxblood: #4a0710;
+  --blood: #8a0b1a;
+  --blood_bright: #c1162b;
+  --ember: #ff4a3d;
+  --brass: #c9a36a;
+  --signal_ok: #4fae7c;
+  --stripe_white: #f6f1ec;
+  --display_serif: "DM Serif Display", Georgia, serif;
+  --display: "Big Shoulders Display", "Arial Narrow", sans-serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .9 0 0 0 0 .88 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+* { box-sizing: border-box; }
+html { background: var(--void); }
+body { margin: 0; background: var(--void); color: var(--bone); font: 400 16px/1.55 var(--body); -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+::selection { background: var(--blood_bright); color: var(--stripe_white); }
+
+.site_header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px clamp(16px, 4vw, 56px); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; background: rgba(10, 5, 6, 0.86); backdrop-filter: blur(10px); }
+.site_header img { height: 22px; display: block; }
+.site_header nav { display: flex; gap: 22px; font: 500 12px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; }
+.site_header nav a { color: var(--ash); text-decoration: none; }
+.site_header nav a:hover, .site_header nav a[aria-current] { color: var(--bone); }
+
+.hero { padding: clamp(48px, 9vw, 120px) clamp(16px, 4vw, 56px) clamp(32px, 5vw, 64px); display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: clamp(28px, 5vw, 80px); align-items: end; }
+.hero_logo { display: block; width: 100%; max-width: 640px; height: auto; box-shadow: 0 30px 80px -30px rgba(193, 22, 43, 0.45); }
+.eyebrow { font: 500 12px/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--blood_bright); margin: 0 0 18px; }
+.hero h1 { font: 400 clamp(44px, 6.4vw, 96px)/0.95 var(--display_serif); letter-spacing: -0.015em; margin: 0 0 22px; }
+.hero h1 em { color: var(--blood_bright); }
+.hero p { color: var(--ash); max-width: 46ch; margin: 0 0 12px; }
+.hero p strong { color: var(--bone); font-weight: 500; }
+
+.filters { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 clamp(16px, 4vw, 56px) 28px; border-bottom: 1px solid var(--line); }
+.filters button, .ad_actions button { font: 500 12px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ash); background: transparent; border: 1px solid var(--line_strong); border-radius: 999px; padding: 10px 16px; cursor: pointer; transition: color .2s, border-color .2s, background .2s; }
+.filters button:hover, .ad_actions button:hover { color: var(--bone); border-color: var(--ash); }
+.filters button[aria-pressed="true"] { color: var(--stripe_white); background: var(--blood); border-color: var(--blood); }
+button:focus-visible { outline: 2px solid var(--blood_bright); outline-offset: 3px; }
+.filters .count { color: var(--smoke); margin-left: 6px; }
+
+.gallery { padding: 0 clamp(16px, 4vw, 56px) 96px; }
+.format_group { padding-top: clamp(40px, 5vw, 72px); }
+.format_group[hidden] { display: none; }
+.group_head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-top: 1px solid var(--line_strong); padding-top: 16px; margin-bottom: clamp(24px, 3vw, 40px); }
+.group_head h2 { margin: 0; font: 400 clamp(28px, 3vw, 40px)/1 var(--display_serif); letter-spacing: -0.01em; }
+.group_head p { margin: 0; font: 400 13px/1.4 var(--mono); color: var(--smoke); }
+.group_grid { display: grid; gap: clamp(36px, 3.4vw, 56px) clamp(20px, 2.4vw, 36px); align-items: start; }
+.format_group[data-format="banner"] .group_grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 560px), 1fr)); }
+.format_group[data-format="square"] .group_grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); }
+.format_group[data-format="story"] .group_grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); }
+.ad { min-width: 0; }
+.ad_meta { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 16px 0 8px; font: 500 11px/1.3 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--smoke); }
+.ad_meta b { color: var(--bone); font-weight: 500; }
+.ad_meta span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ad_meta span:last-child { white-space: nowrap; }
+.copy_text { font-size: 14px; color: var(--ash); margin: 0 0 12px; white-space: pre-line; }
+.copy_text .source { display: block; color: var(--smoke); font: 400 12px/1.5 var(--mono); margin-top: 6px; }
+.ad_actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.ad_actions button.is_done { color: var(--signal_ok); border-color: var(--signal_ok); }
+
+.poster { position: relative; overflow: hidden; container-type: inline-size; background: var(--void); color: var(--bone); border-radius: 4px; box-shadow: 0 1px 0 var(--line_strong) inset, 0 24px 60px -28px rgba(0, 0, 0, 0.9); isolation: isolate; }
+.poster[data-format="square"] { aspect-ratio: 1 / 1; }
+.poster[data-format="story"] { aspect-ratio: 9 / 16; }
+.poster[data-format="banner"] { aspect-ratio: 16 / 9; }
+.poster::after { content: ""; position: absolute; inset: 0; background-image: var(--grain); opacity: 0.09; mix-blend-mode: overlay; pointer-events: none; z-index: 10; }
+.poster > * { position: absolute; margin: 0; }
+.poster svg { overflow: visible; }
+.p_eyebrow { font: 500 2.1cqw/1.2 var(--mono); letter-spacing: 0.16em; text-transform: uppercase; }
+.p_note { font: 400 1.7cqw/1.45 var(--mono); color: var(--smoke); letter-spacing: 0.02em; }
+.p_band { left: 0; width: 100%; height: auto; display: block; }
+.p_word { height: auto; display: block; }
+.serif { font-family: var(--display_serif); font-weight: 400; letter-spacing: -0.015em; }
+.caps { font-family: var(--display); font-weight: 900; text-transform: uppercase; }
+
+.stack { display: flex; flex-direction: column; }
+.stack > * { margin: 0; }
+
+.p01 { background: radial-gradient(120% 90% at 20% 10%, #a3101f 0%, var(--blood) 45%, var(--oxblood) 100%); }
+.p01 .p_eyebrow { top: 6cqw; left: 6cqw; color: rgba(246, 241, 236, 0.75); }
+.p01 .stack { left: 6cqw; top: 13cqw; gap: 3.4cqw; }
+.p01 .slogan { font-size: 21cqw; line-height: 0.86; letter-spacing: -0.005em; color: var(--stripe_white); white-space: nowrap; }
+.p01 .slogan span { display: block; }
+.p01 .sub { font: italic 400 5.4cqw/1 var(--display_serif); color: var(--stripe_white); }
+.p01 .p_band { bottom: 0; }
+
+.p01s { background: radial-gradient(100% 70% at 30% 20%, #a3101f 0%, var(--blood) 45%, var(--oxblood) 100%); }
+.p01s .p_eyebrow { top: 8cqw; left: 8cqw; font-size: 3.4cqw; color: rgba(246, 241, 236, 0.75); }
+.p01s .stack { left: 7cqw; top: 17cqw; gap: 5cqw; }
+.p01s .slogan { font-size: 28cqw; line-height: 0.86; color: var(--stripe_white); white-space: nowrap; }
+.p01s .slogan span { display: block; }
+.p01s .slogan span:nth-child(odd) { color: var(--stripe_white); }
+.p01s .slogan span:nth-child(2) { font-size: 1.32em; line-height: 0.82; }
+.p01s .sub { font: italic 400 8.4cqw/1.05 var(--display_serif); color: var(--stripe_white); }
+.p01s .p_band { bottom: 0; }
+
+.p02 { background: radial-gradient(70% 90% at 80% 40%, #1d1012 0%, var(--void) 70%); }
+.p02 .p_eyebrow { top: 5cqw; left: 5cqw; color: var(--brass); font-size: 1.3cqw; }
+.p02 .p_word { top: 4.6cqw; right: 5cqw; width: 10cqw; opacity: 0.9; }
+.p02 .stack { left: 5cqw; top: 12cqw; width: 38cqw; gap: 2.6cqw; }
+.p02 .head { font-size: 7.4cqw; line-height: 0.92; }
+.p02 .head em { color: var(--blood_bright); font-style: italic; }
+.p02 .sub { font: 400 1.6cqw/1.55 var(--body); color: var(--ash); }
+.p02 .sub b { color: var(--bone); font-weight: 500; }
+.p02 .clock { right: 5cqw; top: 11cqw; text-align: right; }
+.p02 .clock span { display: block; font: 400 19cqw/0.9 var(--display_serif); letter-spacing: -0.035em; color: var(--brass); font-variant-numeric: tabular-nums; }
+.p02 .clock small { display: block; margin-top: 1.2cqw; font: 500 1.2cqw/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--smoke); }
+.p02 .meter { left: 5cqw; right: 5cqw; bottom: 8.4cqw; height: 0.5cqw; background: rgba(255, 214, 214, 0.08); }
+.p02 .meter::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 0.5cqw; background: var(--blood_bright); box-shadow: 0 0 2cqw var(--blood_bright); }
+.p02 .meter_labels { left: 5cqw; right: 5cqw; bottom: 9.9cqw; display: flex; justify-content: space-between; font: 500 1.15cqw/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--smoke); }
+.p02 .meter_labels b { color: var(--blood_bright); font-weight: 500; }
+.p02 .p_note { left: 5cqw; right: 5cqw; bottom: 3.6cqw; font-size: 1cqw; }
+
+.p02s { background: radial-gradient(90% 60% at 50% 25%, #22121a 0%, var(--void) 70%); }
+.p02s .p_eyebrow { top: 8cqw; left: 8cqw; font-size: 3cqw; color: var(--brass); }
+.p02s .p_word { top: 7.4cqw; right: 8cqw; width: 20cqw; }
+.p02s .clock { left: 6cqw; right: 6cqw; top: 20cqw; }
+.p02s .clock span { display: block; font: 400 36cqw/0.9 var(--display_serif); letter-spacing: -0.04em; color: var(--brass); font-variant-numeric: tabular-nums; }
+.p02s .clock small { display: block; margin: 2.4cqw 0 0 2cqw; font: 500 2.6cqw/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--smoke); }
+.p02s .stack { left: 8cqw; right: 8cqw; top: 70cqw; gap: 5cqw; }
+.p02s .head { font-size: 17cqw; line-height: 0.92; }
+.p02s .head em { color: var(--blood_bright); font-style: italic; }
+.p02s .sub { font: 400 4.2cqw/1.5 var(--body); color: var(--ash); }
+.p02s .sub b { color: var(--bone); font-weight: 500; }
+.p02s .meter_labels { left: 8cqw; right: 8cqw; bottom: 26cqw; display: flex; justify-content: space-between; font: 500 2.6cqw/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--smoke); }
+.p02s .meter_labels b { color: var(--blood_bright); font-weight: 500; }
+.p02s .meter { left: 8cqw; right: 8cqw; bottom: 22cqw; height: 1.2cqw; background: rgba(255, 214, 214, 0.08); }
+.p02s .meter::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 1.2cqw; background: var(--blood_bright); box-shadow: 0 0 4cqw var(--blood_bright); }
+.p02s .p_note { left: 8cqw; right: 8cqw; bottom: 7cqw; font-size: 2.4cqw; }
+
+.p03 { background: var(--bone); color: var(--void); }
+.p03 .p_eyebrow { top: 6cqw; left: 7cqw; color: var(--blood); }
+.p03 .math { left: 7cqw; right: 7cqw; top: 13cqw; }
+.p03 .term_row { display: flex; align-items: baseline; justify-content: space-between; gap: 3cqw; }
+.p03 .num { font: 400 15cqw/1.02 var(--display_serif); letter-spacing: -0.03em; }
+.p03 .lab { font: 500 1.7cqw/1.2 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: #7a6a66; text-align: right; }
+.p03 .rule { height: 0.6cqw; background: var(--void); margin: 1.4cqw 0 1.6cqw; }
+.p03 .result { margin-top: 3cqw; }
+.p03 .result .num { color: var(--blood); font-size: 11cqw; }
+.p03 .result .lab { color: var(--blood); }
+.p03 .stack { left: 7cqw; right: 7cqw; bottom: 6cqw; gap: 2.4cqw; }
+.p03 .sub { font: italic 400 4.2cqw/1.15 var(--display_serif); }
+.p03 .p_note { color: #7a6a66; }
+
+.p04 { background: linear-gradient(180deg, #23090d 0%, var(--void) 62%); }
+.p04 .p_eyebrow { top: 7cqw; left: 8cqw; font-size: 3.2cqw; color: var(--brass); }
+.p04 .head { left: 8cqw; right: 8cqw; top: 13.5cqw; font-size: 15.5cqw; line-height: 0.9; }
+.p04 .head em { font-style: italic; color: var(--blood_bright); }
+.p04 .bar { left: 50%; top: 60cqw; width: 58cqw; transform: translateX(-50%) rotate(-7deg); filter: drop-shadow(0 6cqw 8cqw rgba(0, 0, 0, 0.75)); }
+.p04 .stack { left: 8cqw; right: 8cqw; bottom: 7cqw; gap: 3cqw; }
+.p04 .sub { font: 400 4.4cqw/1.4 var(--body); color: var(--ash); }
+.p04 .sub b { color: var(--bone); font-weight: 500; }
+.p04 .p_note { font-size: 2.6cqw; }
+
+.p05 { background: var(--void); }
+.p05 .p_eyebrow { top: 7cqw; left: 8cqw; font-size: 3.2cqw; color: var(--smoke); }
+.p05 .chair { left: 50%; top: 17cqw; width: 54cqw; transform: translateX(-50%); }
+.p05 .stack { left: 8cqw; right: 8cqw; top: 88cqw; gap: 3cqw; }
+.p05 .head { font-size: 12.6cqw; line-height: 0.92; }
+.p05 .sub { font: italic 400 6.4cqw/1.1 var(--display_serif); color: var(--blood_bright); }
+.p05 .term { left: 8cqw; right: 8cqw; bottom: 14cqw; background: var(--char); border: 1px solid var(--line_strong); border-radius: 1.6cqw; padding: 4cqw 4.4cqw; font: 400 3cqw/1.6 var(--mono); color: var(--ash); }
+.p05 .term b { color: var(--signal_ok); font-weight: 400; }
+.p05 .term i { color: var(--brass); font-style: normal; }
+.p05 .p_word { left: 8cqw; bottom: 6cqw; width: 22cqw; }
+
+.p06 { background: var(--char); }
+.p06 .seats { top: 0; right: 0; bottom: 0; left: 44cqw; background-image: radial-gradient(circle at 50% 60%, #3a2c2d 0 0.42cqw, transparent 0.46cqw); background-size: 1.6cqw 1.9cqw; -webkit-mask-image: linear-gradient(90deg, transparent, #000 25%); mask-image: linear-gradient(90deg, transparent, #000 25%); }
+.p06 .you { left: 70.8cqw; top: 26.6cqw; width: 1.6cqw; height: 1.9cqw; }
+.p06 .you::before { content: ""; position: absolute; left: 50%; top: 60%; width: 1cqw; height: 1cqw; border-radius: 50%; background: var(--blood_bright); transform: translate(-50%, -50%); box-shadow: 0 0 0 0.5cqw rgba(193, 22, 43, 0.25), 0 0 3cqw var(--blood_bright); }
+.p06 .you span { position: absolute; left: 3cqw; top: -0.4cqw; white-space: nowrap; font: 500 1.3cqw/1.3 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone); background: var(--void); padding: 0.7cqw 1.1cqw; border-left: 2px solid var(--blood_bright); }
+.p06 .p_eyebrow { top: 5cqw; left: 5cqw; color: var(--smoke); font-size: 1.3cqw; }
+.p06 .stack { left: 5cqw; top: 12cqw; width: 42cqw; gap: 2.6cqw; }
+.p06 .head { font-size: 8.4cqw; line-height: 0.9; }
+.p06 .head em { font-style: italic; color: var(--blood_bright); }
+.p06 .sub { font: 400 1.7cqw/1.5 var(--body); color: var(--ash); width: 34cqw; }
+.p06 .p_word { left: 5cqw; bottom: 5cqw; width: 11cqw; }
+
+.p07 { background: radial-gradient(90% 60% at 50% 30%, #241517 0%, var(--void) 75%); }
+.p07 .date { top: 11cqw; left: 0; right: 0; text-align: center; font: 400 4.2cqw/1 var(--body); letter-spacing: 0.04em; color: var(--ash); }
+.p07 .time { top: 17cqw; left: 0; right: 0; text-align: center; font: 300 25cqw/1 var(--body); letter-spacing: -0.02em; color: rgba(239, 230, 225, 0.92); }
+.p07 .note_card { left: 6cqw; right: 6cqw; top: 50cqw; background: rgba(239, 230, 225, 0.1); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 5cqw; padding: 4.4cqw 5cqw; }
+.p07 .note_card .row { display: flex; justify-content: space-between; font: 500 2.8cqw/1 var(--body); color: var(--ash); letter-spacing: 0.02em; text-transform: uppercase; }
+.p07 .note_card .row span:first-child::before { content: ""; display: inline-block; width: 3cqw; height: 3cqw; border-radius: 0.8cqw; background: #5b4b48; vertical-align: -0.6cqw; margin-right: 1.8cqw; }
+.p07 .note_card h3 { margin: 2.6cqw 0 1cqw; font: 600 4cqw/1.2 var(--body); color: var(--bone); }
+.p07 .note_card p { margin: 0; font: 400 3.8cqw/1.35 var(--body); color: var(--ash); }
+.p07 .stack { left: 8cqw; right: 8cqw; bottom: 44cqw; gap: 3.4cqw; }
+.p07 .head { font-size: 13cqw; line-height: 0.95; white-space: nowrap; }
+.p07 .head em { font-style: italic; color: var(--blood_bright); }
+.p07 .toast { display: flex; align-items: center; gap: 3cqw; background: var(--char); border: 1px solid var(--line_strong); border-radius: 2cqw; padding: 3.4cqw 4cqw; font: 400 3.2cqw/1.2 var(--mono); color: var(--bone); }
+.p07 .toast i { width: 2.4cqw; height: 2.4cqw; border-radius: 50%; background: var(--signal_ok); box-shadow: 0 0 2.4cqw var(--signal_ok); flex: none; }
+.p07 .toast span { color: var(--smoke); margin-left: auto; }
+.p07 .sub { font: 400 3.6cqw/1.45 var(--body); color: var(--ash); }
+.p07 .p_band { bottom: 0; }
+
+.p08 { background: var(--void); }
+.p08 .head { left: 5cqw; top: 9cqw; font-size: 6cqw; line-height: 1; width: 40cqw; }
+.p08 .head .strike { color: var(--smoke); text-decoration: line-through; text-decoration-color: var(--blood_bright); text-decoration-thickness: 0.45cqw; }
+.p08 .head code { display: block; margin-top: 1.6cqw; font: 500 6cqw/1 var(--mono); letter-spacing: -0.04em; color: var(--blood_bright); }
+.p08 .sub { left: 5cqw; top: 33cqw; width: 34cqw; font: 400 1.7cqw/1.5 var(--body); color: var(--ash); }
+.p08 .p_word { left: 5cqw; bottom: 5cqw; width: 11cqw; }
+.p08 .code { right: 4cqw; top: 6cqw; width: 49cqw; background: var(--char); border: 1px solid var(--line_strong); border-radius: 1cqw; box-shadow: 0 3cqw 6cqw -2cqw rgba(0, 0, 0, 0.8); overflow: hidden; }
+.p08 .code header { display: flex; gap: 0.7cqw; padding: 1.3cqw 1.6cqw; border-bottom: 1px solid var(--line); }
+.p08 .code header i { width: 0.9cqw; height: 0.9cqw; border-radius: 50%; background: #3a2c2d; }
+.p08 .code header span { margin-left: auto; font: 500 1cqw/1 var(--mono); letter-spacing: 0.12em; color: var(--smoke); text-transform: uppercase; }
+.p08 pre { margin: 0; padding: 2cqw 2.2cqw; font: 400 1.3cqw/1.7 var(--mono); color: var(--bone); white-space: pre; }
+.p08 pre .k { color: var(--blood_bright); }
+.p08 pre .s { color: var(--brass); }
+.p08 pre .c { color: var(--smoke); }
+.p08 pre .o { color: var(--signal_ok); }
+
+.p09 { background: radial-gradient(80% 70% at 60% 45%, #1c1012 0%, var(--void) 70%); }
+.p09 .p_eyebrow { top: 6cqw; left: 6cqw; color: var(--smoke); }
+.p09 .part { left: 14cqw; top: 9cqw; width: 78cqw; }
+.p09 .head { left: 6cqw; bottom: 17cqw; font-size: 10.4cqw; line-height: 0.95; }
+.p09 .head code { font: 500 0.82em/1 var(--mono); letter-spacing: -0.05em; color: var(--blood_bright); }
+.p09 .sub { left: 6cqw; right: 26cqw; bottom: 6cqw; font: 400 2.6cqw/1.45 var(--body); color: var(--ash); }
+.p09 .p_word { right: 6cqw; bottom: 6.6cqw; width: 14cqw; }
+
+.p10 { background-color: var(--char); background-image: linear-gradient(rgba(201, 163, 106, 0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(201, 163, 106, 0.06) 1px, transparent 1px); background-size: 4cqw 4cqw; }
+.p10 .head { left: 6cqw; top: 6cqw; font-size: 9.6cqw; line-height: 0.95; }
+.p10 .head em { font-style: italic; color: var(--blood_bright); }
+.p10 .drawing { left: 6cqw; top: 30cqw; width: 88cqw; }
+.p10 .sub { left: 6cqw; right: 34cqw; bottom: 6cqw; font: 400 2.5cqw/1.45 var(--body); color: var(--ash); }
+.p10 .title_block { right: 6cqw; bottom: 6cqw; border: 1px solid rgba(201, 163, 106, 0.4); font: 500 1.3cqw/1.5 var(--mono); color: var(--brass); letter-spacing: 0.1em; text-transform: uppercase; background: var(--char); }
+.p10 .title_block div { padding: 0.8cqw 1.4cqw; border-bottom: 1px solid rgba(201, 163, 106, 0.25); }
+.p10 .title_block div:last-child { border-bottom: 0; }
+.p10 .title_block img { display: block; width: 16cqw; }
+
+.p11 { background: linear-gradient(180deg, #0d0709 0%, #160c0e 70%, var(--void) 100%); }
+.p11 .moon { right: 12cqw; top: 10cqw; width: 14cqw; height: 14cqw; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #f6f1ec, #cfc2bb 70%); box-shadow: 0 0 10cqw rgba(246, 241, 236, 0.25); }
+.p11 .head { left: 8cqw; top: 9cqw; font-size: 15cqw; line-height: 0.88; width: 62cqw; }
+.p11 .head em { font-style: italic; color: var(--blood_bright); }
+.p11 .stone { left: 50%; top: 50cqw; width: 64cqw; transform: translateX(-50%); }
+.p11 .ground { left: 0; right: 0; top: 123.6cqw; height: 1px; background: linear-gradient(90deg, transparent, var(--line_strong), transparent); }
+.p11 .stack { left: 8cqw; right: 8cqw; bottom: 7cqw; gap: 5cqw; align-items: center; text-align: center; }
+.p11 .sub { font: italic 400 6cqw/1.2 var(--display_serif); color: var(--bone); }
+.p11 .p_word { width: 26cqw; position: static; }
+.p11 .p_note { font-size: 2.6cqw; }
+
+.p12 { background: radial-gradient(90% 120% at 20% 0%, #a3101f 0%, var(--blood) 50%, var(--oxblood) 100%); }
+.p12 .big { left: -1.2cqw; bottom: -4cqw; font: 400 44cqw/0.8 var(--display_serif); letter-spacing: -0.045em; color: var(--stripe_white); white-space: nowrap; }
+.p12 .head { right: 5cqw; top: 5.5cqw; text-align: right; font-size: 6.4cqw; line-height: 0.95; color: var(--stripe_white); }
+.p12 .head em { font-style: italic; }
+.p12 .p_eyebrow { left: 5cqw; top: 6cqw; font-size: 1.3cqw; color: rgba(246, 241, 236, 0.75); }
+.p12 .fine { right: 5cqw; top: 21cqw; text-align: right; font: 500 1.3cqw/1.8 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: rgba(246, 241, 236, 0.75); }
+.p12 .p_word { left: 5cqw; top: 9.5cqw; width: 13cqw; }
+
+.p13 { background: var(--void); }
+.p13 .window { left: 8cqw; right: 8cqw; top: 7cqw; height: 52cqw; background: linear-gradient(180deg, #1f1718, #120c0d); border: 1px solid var(--line_strong); border-radius: 1.4cqw; overflow: hidden; }
+.p13 .window header { position: absolute; left: 0; right: 0; top: 0; display: flex; gap: 1.6cqw; align-items: center; padding: 1.8cqw 2.2cqw; border-bottom: 1px solid var(--line); font: 500 1.6cqw/1 var(--mono); color: var(--ash); }
+.p13 .window header b { color: var(--signal_ok); font-weight: 500; }
+.p13 .window header span:last-child { margin-left: auto; color: var(--smoke); }
+.p13 .window svg { position: absolute; left: 50%; top: 55%; width: 46cqw; transform: translate(-50%, -50%); }
+.p13 .stack { left: 8cqw; right: 8cqw; bottom: 7cqw; gap: 3cqw; }
+.p13 .head { font-size: 9.4cqw; line-height: 0.95; }
+.p13 .head em { font-style: italic; color: var(--blood_bright); }
+.p13 .row { display: flex; justify-content: space-between; align-items: end; gap: 6cqw; }
+.p13 .sub { font: 400 2.5cqw/1.45 var(--body); color: var(--ash); max-width: 52cqw; }
+.p13 .p_word { width: 13cqw; position: static; }
+
+.p14 { background: radial-gradient(90% 80% at 50% 40%, #5a0a14 0%, var(--oxblood) 55%, #1c0408 100%); }
+.p14 .square { left: 20cqw; top: 14cqw; width: 60cqw; filter: drop-shadow(0 5cqw 6cqw rgba(0, 0, 0, 0.6)); }
+.p14 .head { left: 6cqw; right: 6cqw; bottom: 14cqw; font-size: 10cqw; line-height: 0.95; text-align: center; color: var(--stripe_white); }
+.p14 .sub { left: 6cqw; right: 6cqw; bottom: 6.5cqw; text-align: center; font: 400 2.5cqw/1.45 var(--body); color: rgba(246, 241, 236, 0.72); }
+.p14 .p_eyebrow { left: 6cqw; top: 6cqw; color: rgba(246, 241, 236, 0.6); }
+.p14 .p_word { right: 6cqw; top: 5.6cqw; width: 13cqw; }
+
+.colophon { border-top: 1px solid var(--line); padding: 32px clamp(16px, 4vw, 56px) 48px; display: flex; flex-wrap: wrap; gap: 12px 32px; justify-content: space-between; font: 400 12px/1.6 var(--mono); color: var(--smoke); }
+.colophon a { color: var(--ash); }
+
+.toast_live { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); opacity: 0; background: var(--panel_raised); border: 1px solid var(--line_strong); color: var(--bone); font: 500 12px/1 var(--mono); letter-spacing: 0.08em; padding: 12px 16px; border-radius: 999px; transition: opacity .25s, transform .25s; pointer-events: none; z-index: 20; }
+.toast_live.is_visible { opacity: 1; transform: translate(-50%, 0); }
+
+@media (max-width: 820px) {
+  .hero { grid-template-columns: 1fr; }
+  .site_header nav { gap: 14px; }
+  .site_header nav a.optional { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+<header class="site_header">
+  <a href="index.html" aria-label="BISCAD home"><img src="campaign/wordmark.svg" alt="BISCAD"></a>
+  <nav>
+    <a href="index.html" class="optional">Home</a>
+    <a href="docs.html" class="optional">Docs</a>
+    <a href="campaign.html" aria-current="page">Campaign</a>
+    <a href="launch.html">Launch</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <div>
+    <p class="eyebrow">Launch campaign · 2026</p>
+    <h1>Make CAD <em>great</em> again.</h1>
+    <p>Sixteen creatives for the BISCAD launch. Each one is HTML and SVG, so it stays sharp at any size. <strong>Download a PNG</strong> or <strong>copy the post text</strong> under each card.</p>
+    <p>Every claim about Onshape cites its own pricing page or developer docs, checked 4 Oct 2026.</p>
+  </div>
+  <img class="hero_logo" src="campaign/logo.svg" alt="BISCAD logo: a red band between two white stripes, with BISCAD cropped at both edges" width="1063" height="400">
+</section>
+
+<div class="filters" role="toolbar" aria-label="Filter by format">
+  <button type="button" data-filter="all" aria-pressed="true">All<span class="count"></span></button>
+  <button type="button" data-filter="square" aria-pressed="false">1:1 Feed<span class="count"></span></button>
+  <button type="button" data-filter="story" aria-pressed="false">9:16 Story<span class="count"></span></button>
+  <button type="button" data-filter="banner" aria-pressed="false">16:9 Banner<span class="count"></span></button>
+</div>
+
+<main class="gallery">
+<section class="format_group" data-format="banner">
+  <header class="group_head"><h2>16:9 banners</h2><p>Headers, link cards, Product Hunt gallery, YouTube.</p></header>
+  <div class="group_grid">
+<article class="ad" data-format="banner" data-slug="02-one-hour-per-year">
+  <div class="poster p02" data-format="banner">
+    <p class="p_eyebrow">Onshape Professional · 5,000 API calls / user / year¹</p>
+    <img class="p_word" src="campaign/wordmark.svg" alt="">
+    <div class="stack">
+      <h2 class="head serif">One hour.<br><em>Per year.</em></h2>
+      <p class="sub">An agent loop at <b>1.4 calls per second</b> spends a Professional seat’s yearly API calls in about <b>60 minutes</b>. BISCAD bills per build.</p>
+    </div>
+    <div class="clock"><span>59:59</span><small>min of API use / year</small></div>
+    <div class="meter_labels"><span>API calls remaining this year</span><b>0 / 5,000</b></div>
+    <div class="meter"></div>
+    <p class="p_note">¹ onshape-public.github.io/docs/auth/limits · onshape.com/en/pricing · checked 2026-10-04 · 5,000 ÷ 3,600 s = 1.39 calls/s · Public App Store apps and browser use do not count toward the limit.</p>
+  </div>
+  <div class="ad_meta"><span><b>02</b> · One hour per year</span><span>16:9</span></div>
+  <p class="copy_text">One hour. Per year.
+Onshape Professional includes 5,000 API calls per user per year. An agent at 1.4 calls/s uses them in about an hour. BISCAD bills per build.<span class="source">Sources: onshape-public.github.io/docs/auth/limits/ · onshape.com/en/pricing (checked 2026-10-04)</span></p>
+  <div class="ad_actions"><button type="button" data-action="download">Download PNG</button><button type="button" data-action="copy">Copy text</button></div>
+</article>
+<article class="ad" data-format="banner" data-slug="08-talk-to-v1-build">
+  <div class="poster p08" data-format="banner">
+    <h2 class="head serif"><span class="strike">Talk to sales?</span><code>/v1/build</code></h2>
+    <p class="sub">One POST. A solid, a render and stable face ids come back. No demo call. No seat count.</p>
+    <img class="p_word" src="campaign/wordmark.svg" alt="">
+    <div class="code">
+      <header><i></i><i></i><i></i><span>terminal</span></header>
+<pre><span class="k">curl</span> -X POST https://biscad.dev/v1/build \
+  -H <span class="s">"Authorization: Bearer $BISCAD_KEY"</span> \
+  -d <span class="s">'{"script": "from build123d import *\n
+       result = Box(40, 20, 8) - Cylinder(4, 8)"}'</span>
+
+<span class="c"># 200 OK</span>
+{
+  <span class="s">"ok"</span>: <span class="o">true</span>,
+  <span class="s">"summary"</span>: {
+    <span class="s">"volume"</span>: 5997.88,
+    <span class="s">"parts"</span>: [{ <span class="s">"id"</span>: <span class="s">"p0"</span>, <span class="s">"faces"</span>: 7 }]
+  },
+  <span class="s">"scene"</span>: { <span class="c">…mesh with face ids p0/f0…p0/f6</span> }
+}</pre>
+    </div>
+  </div>
+  <div class="ad_meta"><span><b>08</b> · Talk to /v1/build</span><span>16:9</span></div>
+  <p class="copy_text">Talk to sales? Talk to /v1/build.
+One POST to BISCAD returns a solid, a render and stable face ids. No demo call. No seat count.</p>
+  <div class="ad_actions"><button type="button" data-action="download">Download PNG</button><button type="button" data-action="copy">Copy text</button></div>
+</article>
+<article class="ad" data-format="banner" data-slug="12-two-thousand-builds">
+  <div class="poster p12" data-format="banner">
+    <p class="p_eyebrow">The fine print, in big print</p>
+    <img class="p_word" src="campaign/wordmark.svg" alt="">
+    <h2 class="head serif">builds a month.<br><em>Free.</em></h2>
+    <p class="fine">120 requests / min<br>60 s per build<br>at launch</p>
+    <div class="big">2,000</div>
+  </div>
+  <div class="ad_meta"><span><b>12</b> · The fine print is the big print</span><span>16:9</span></div>
+  <p class="copy_text">2,000 builds a month. Free.
+The fine print, in big print: 120 requests per minute and 60 s per build on the BISCAD free plan at launch.</p>
+  <div class="ad_actions"><button type="button" data-action="download">Download PNG</button><button type="button" data-action="copy">Copy text</button></div>
+</article>
+<article class="ad" data-format="banner" data-slug="06-seats-are-for-stadiums">
+  <div class="poster p06" data-format="banner">
+    <p class="p_eyebrow">Licensing, reconsidered</p>
+    <div class="seats"></div>
+    <div class="you"><span>You · paying per build</span></div>
+    <div class="stack">
+      <h2 class="head serif">Seats are for <em>stadiums.</em></h2>
+      <p class="sub">BISCAD is a CAD kernel over REST and MCP. One price unit: the build.</p>
+    </div>
+    <img class="p_word" src="campaign/wordmark.svg" alt="">
+  </div>
+  <div class="ad_meta"><span><b>06</b> · Seats are for stadiums</span><span>16:9</span></div>
+  <p class="copy_text">Seats are for stadiums.
+BISCAD is a CAD kernel over REST and MCP. Priced per build.</p>
+  <div class="ad_actions"><button type="button" data-action="download">Download PNG</button><button type="button" data-action="copy">Copy text</button></div>
+</article>
+  </div>
+</section>
+
+<section class="format_group" data-format="square">
+  <header class="group_head"><h2>1:1 feed</h2><p>X, LinkedIn and Instagram feed posts.</p></header>
+  <div class="group_grid">
+<article class="ad" data-format="square" data-slug="01-make-cad-great-again-square">
+  <div class="poster p01" data-format="square">
+    <p class="p_eyebrow">BISCAD · the CAD kernel for agents</p>
+    <div class="stack">
+      <h2 class="slogan caps"><span>Make CAD</span><span>Great Again</span></h2>
+      <p class="sub">Per build. Not per seat.</p>
+    </div>
+    <img class="p_band" src="campaign/logo.svg" alt="" width="1063" height="400">
+  </div>
+  <div class="ad_meta"><span><b>01</b> · Make CAD Great Again</span><span>1:1</span></div>
+  <p class="copy_text">MAKE CAD GREAT AGAIN.
+BISCAD is a CAD kernel your agent calls over REST and MCP. Priced per build, not per seat.</p>
+  <div class="ad_actions"><button type="button" data-action="download">Download PNG</button><button type="button" data-action="copy">Copy text</button></div>
+</article>
+<article class="ad" data-format="square" data-slug="03-long-division">
+  <div class="poster p03" data-format="square">
+    <p class="p_eyebrow">Maths class · Onshape Professional</p>
+    <div class="math">
+      <div class="term_row"><span class="num">$2,500</span><span class="lab">seat / user / year</span></div>
+      <div class="rule"></div>
+      <div class="term_row"><span class="num">5,000</span><span class="lab">API calls / user / year</span></div>
+      <div class="term_row result"><span class="num">= $0.50</span><span class="lab">per API call</span></div>
+    </div>
+    <div class="stack">
+      <p class="sub">The seat also includes the CAD app. We are just doing the maths.</p>
+      <p class="p_note">onshape.com/en/pricing · onshape-public.github.io/docs/auth/limits · checked 2026-10-04</p>
+    </div>
+  </div>
+  <div class="ad_meta"><span><b>03</b> · The long division</span><span>1:1</span></div>
+  <p class="copy_text">$2,500 ÷ 5,000 = $0.50.
+That is an Onshape Professional seat divided by its yearly API calls. The seat also includes the CAD app. We are just doing the maths. BISCAD is priced per build.<span class="source">Sources: onshape.com/en/pricing · onshape-public.github.io/docs/auth/limits/ (checked 2026-10-04)</span></p>
+  <div class="ad_actions"><button type="button" data-action="download">Download PNG</button><button type="button" data-action="copy">Copy text</button></div>
+</article>
+<article class="ad" data-format="square" data-slug="09-face-ids">
+  <div class="poster p09" data-format="square">
+    <p class="p_eyebrow">Topology naming · stable</p>
+    <svg class="part" viewBox="0 0 400 300" fill="none" aria-hidden="true">
+      <g stroke="#efe6e1" stroke-width="1.4" stroke-linejoin="round" opacity="0.9">
+        <path d="M60 190 200 250 340 190 200 130Z" fill="#1a1213"/>
+        <path d="M60 190v22l140 60v-22z" fill="#231819"/>
+        <path d="M340 190v22l-140 60v-22z" fill="#120c0d"/>
+        <path d="M60 190 60 60 82 50 82 180" fill="#231819"/>
+        <path d="M82 50 222 110 222 140 82 180Z" fill="#8a0b1a" stroke="#c1162b"/>
+        <path d="M60 60 200 120 222 110" />
+        <path d="M200 120 200 130"/>
+        <ellipse cx="150" cy="118" rx="13" ry="19" transform="rotate(-24 150 118)" fill="#4a0710" stroke="#f6f1ec"/>
+        <ellipse cx="200" cy="200" rx="16" ry="9" fill="#0a0506"/>
+        <ellipse cx="270" cy="190" rx="16" ry="9" fill="#0a0506"/>
+      </g>
+      <g stroke="#c9a36a" stroke-width="1.2">
+        <path d="M180 132 268 54h80"/>
+        <circle cx="180" cy="132" r="3" fill="#c9a36a"/>
+      </g>
+      <text x="274" y="46" fill="#c9a36a" font-family="IBM Plex Mono, monospace" font-size="20" font-weight="500">p0/f7</text>
+      <g stroke="#6e605d" stroke-width="1" stroke-dasharray="3 4"><path d="M340 212v40M200 272v20M200 288 340 228"/></g>
+      <text x="282" y="282" fill="#6e605d" font-family="IBM Plex Mono, monospace" font-size="11">60 mm</text>
+    </svg>
+    <h2 class="head serif"><code>p0/f7</code> is still <code>p0/f7</code>.</h2>
+    <p class="sub">Stable face ids across rebuilds. Your agent can point at geometry and mean it.</p>
+    <img class="p_word" src="campaign/wordmark.svg" alt="">
+  </div>
+  <div class="ad_meta"><span><b>09</b> · Face ids that stay put</span><span>1:1</span></div>
+  <p class="copy_text">p0/f7 is still p0/f7.
+BISCAD gives every face and edge a stable id across rebuilds. Your agent can point at geometry and mean it.</p>
+  <div class="ad_actions"><button type="button" data-action="download">Download PNG</button><button type="button" data-action="copy">Copy text</button></div>
+</article>
+<article class="ad" data-format="square" data-slug="13-look-before-you-cut">
+  <div class="poster p13" data-format="square">
+    <div class="window">
+      <header><span>GET /v1/versions/{id}/render.png</span><b>200</b><span>image/png</span></header>
+      <svg viewBox="0 0 300 220" aria-hidden="true">
+        <path d="M150 40 270 95 150 150 30 95Z" fill="#cfc2bb"/>
+        <path d="M30 95v40l120 55v-40z" fill="#8f817c"/>
+        <path d="M270 95v40l-120 55v-40z" fill="#6b5e5a"/>
+        <ellipse cx="150" cy="95" rx="34" ry="16" fill="#3a2c2d"/>
+        <path d="M116 95a34 16 0 0 0 68 0v8a34 16 0 0 1-68 0z" fill="#241a1b"/>
+        <path d="M150 40 270 95" stroke="#c1162b" stroke-width="2.5"/>
+        <circle cx="210" cy="67" r="4" fill="#c1162b"/>
+      </svg>
+    </div>
+    <div class="stack">
+      <h2 class="head serif">Look before <em>you cut.</em></h2>
+      <div class="row"><p class="sub">Every build returns a PNG render. Agents check the part before they ship it.</p><img class="p_word" src="campaign/wordmark.svg" alt=""></div>
+    </div>
+  </div>
+  <div class="ad_meta"><span><b>13</b> · Your agent can see</span><span>1:1</span></div>
+  <p class="copy_text">Look before you cut.
+Every BISCAD build returns a PNG render. Agents check the part before they ship it.</p>
+  <div class="ad_actions"><button type="button" data-action="download">Download PNG</button><button type="button" data-action="copy">Copy text</button></div>
+</article>
+<article class="ad" data-format="square" data-slug="10-snap-fit">
+  <div class="poster p10" data-format="square">
+    <h2 class="head serif">Snap-fit,<br><em>not lock-in.</em></h2>
+    <svg class="drawing" viewBox="0 0 440 230" fill="none" aria-hidden="true" font-family="IBM Plex Mono, monospace" font-size="10.5" font-weight="500">
+      <path d="M20 170h150v-90h18v70h120l26-28h22l-30 48H170v0" stroke="#efe6e1" stroke-width="1.6" stroke-linejoin="round" fill="rgba(239,230,225,0.04)"/>
+      <path d="M20 170h150v20H20z" stroke="#efe6e1" stroke-width="1.6" fill="rgba(239,230,225,0.04)"/>
+      <path d="M170 190h180" stroke="#efe6e1" stroke-width="1.6"/>
+      <path d="M350 190v-22" stroke="#efe6e1" stroke-width="1.6"/>
+      <g stroke="#c1162b" stroke-width="1.2" fill="none"><path d="M308 150 334 122h22l-30 48" fill="rgba(193,22,43,0.35)"/></g>
+      <g stroke="#6e605d" stroke-width="0.8" stroke-dasharray="6 3 1 3"><path d="M8 180h400"/></g>
+      <g fill="#c9a36a" stroke="#c9a36a" stroke-width="0.9">
+        <path d="M188 66h120M188 62v8M308 62v8" fill="none"/><text x="226" y="60" stroke="none">L 120</text>
+        <path d="M370 122v48M366 122h8M366 170h8" fill="none"/><text x="378" y="150" stroke="none">h 3.2</text>
+      </g>
+      <g fill="#a3938f">
+        <text x="22" y="40">.step</text><text x="74" y="40">.stl</text><text x="118" y="40">.3mf</text><text x="162" y="40">.glb</text>
+        <text x="22" y="220">.brep</text><text x="74" y="220">.svg</text><text x="118" y="220">.dxf</text>
+      </g>
+      <g stroke="#6e605d" stroke-width="0.8"><path d="M40 44v40l60 40M90 44v30M134 44v30l40 20M178 44v30M40 208v-18M90 208v-18M134 208v-18"/></g>
+    </svg>
+    <p class="sub">Export STEP, STL, 3MF, GLB, BREP, SVG and DXF. Your geometry leaves when you do.</p>
+    <div class="title_block"><div><img src="campaign/wordmark.svg" alt=""></div><div>SNAP_HOOK · REV A</div><div>Scale 2:1 · mm</div></div>
+  </div>
+  <div class="ad_meta"><span><b>10</b> · Snap-fit, not lock-in</span><span>1:1</span></div>
+  <p class="copy_text">Snap-fit, not lock-in.
+BISCAD exports STEP, STL, 3MF, GLB, BREP, SVG and DXF. Your geometry leaves when you do.</p>
+  <div class="ad_actions"><button type="button" data-action="download">Download PNG</button><button type="button" data-action="copy">Copy text</button></div>
+</article>
+<article class="ad" data-format="square" data-slug="14-choc-full-of-geometry">
+  <div class="poster p14" data-format="square">
+    <p class="p_eyebrow">Ingredients</p>
+    <img class="p_word" src="campaign/wordmark.svg" alt="">
+    <svg class="square" viewBox="0 0 300 250" aria-hidden="true" font-family="IBM Plex Mono, monospace" font-size="10" font-weight="500">
+      <path d="M150 30 260 85 150 140 40 85Z" fill="#c1162b"/>
+      <path d="M150 52 222 88 150 124 78 88Z" fill="#8a0b1a"/>
+      <path d="M150 30 150 52M260 85 222 88M150 140 150 124M40 85 78 88" stroke="#e0485a" stroke-width="1"/>
+      <path d="M40 85v44l110 55v-44z" fill="#5a0711"/>
+      <path d="M260 85v44l-110 55v-44z" fill="#3c050c"/>
+      <path d="M40 85q0 8 6 11l104 52q6 3 0 0" stroke="#ff7a85" stroke-opacity="0.5" fill="none"/>
+      <g fill="#f6f1ec" fill-opacity="0.85">
+        <text x="6" y="28">fillet()</text><text x="236" y="28">chamfer()</text>
+        <text x="0" y="210">loft()</text><text x="244" y="210">sweep()</text><text x="124" y="240">offset()</text>
+      </g>
+      <g stroke="#f6f1ec" stroke-opacity="0.45" stroke-width="0.8" fill="none">
+        <path d="M30 32 70 70M262 32 236 78M20 202 60 130M262 202 230 150M150 230v-40"/>
+      </g>
+    </svg>
+    <h2 class="head serif">Choc-full of geometry.</h2>
+    <p class="sub">Fillets, chamfers, lofts, sweeps, offsets. All build123d. All over HTTP.</p>
+  </div>
+  <div class="ad_meta"><span><b>14</b> · Choc-full of geometry</span><span>1:1</span></div>
+  <p class="copy_text">Choc-full of geometry.
+Fillets, chamfers, lofts, sweeps and offsets. All build123d, all over HTTP, with BISCAD.</p>
+  <div class="ad_actions"><button type="button" data-action="download">Download PNG</button><button type="button" data-action="copy">Copy text</button></div>
+</article>
+  </div>
+</section>
+
+<section class="format_group" data-format="story">
+  <header class="group_head"><h2>9:16 stories</h2><p>Stories, Reels, Shorts and phone-first placements.</p></header>
+  <div class="group_grid">
+<article class="ad" data-format="story" data-slug="01-make-cad-great-again-story">
+  <div class="poster p01s" data-format="story">
+    <p class="p_eyebrow">BISCAD · launch day</p>
+    <div class="stack">
+      <h2 class="slogan caps"><span>Make</span><span>CAD</span><span>Great</span><span>Again</span></h2>
+      <p class="sub">Per build. Not per seat.</p>
+    </div>
+    <img class="p_band" src="campaign/logo.svg" alt="" width="1063" height="400">
+  </div>
+  <div class="ad_meta"><span><b>01b</b> · Make CAD Great Again</span><span>9:16</span></div>
+  <p class="copy_text">MAKE CAD GREAT AGAIN.
+Per build. Not per seat. BISCAD launches today.</p>
+  <div class="ad_actions"><button type="button" data-action="download">Download PNG</button><button type="button" data-action="copy">Copy text</button></div>
+</article>
+<article class="ad" data-format="story" data-slug="02-one-hour-per-year-story">
+  <div class="poster p02s" data-format="story">
+    <p class="p_eyebrow">Onshape Professional · API calls¹</p>
+    <img class="p_word" src="campaign/wordmark.svg" alt="">
+    <div class="clock"><span>59:59</span><small>minutes of agent use / year</small></div>
+    <div class="stack">
+      <h2 class="head serif">One hour.<br><em>Per year.</em></h2>
+      <p class="sub">5,000 API calls per user per year. An agent at <b>1.4 calls/s</b> uses them in about <b>60 minutes</b>. BISCAD bills per build.</p>
+    </div>
+    <div class="meter_labels"><span>Remaining this year</span><b>0 / 5,000</b></div>
+    <div class="meter"></div>
+    <p class="p_note">¹ onshape-public.github.io/docs/auth/limits · onshape.com/en/pricing · checked 2026-10-04 · App Store apps and browser use do not count.</p>
+  </div>
+  <div class="ad_meta"><span><b>02b</b> · One hour per year</span><span>9:16</span></div>
+  <p class="copy_text">One hour. Per year.
+Onshape Professional includes 5,000 API calls per user per year. An agent at 1.4 calls/s uses them in about an hour. BISCAD bills per build.<span class="source">Sources: onshape-public.github.io/docs/auth/limits/ · onshape.com/en/pricing (checked 2026-10-04)</span></p>
+  <div class="ad_actions"><button type="button" data-action="download">Download PNG</button><button type="button" data-action="copy">Copy text</button></div>
+</article>
+<article class="ad" data-format="story" data-slug="04-cadbury-story">
+  <div class="poster p04" data-format="story">
+    <p class="p_eyebrow">A treat for your budget</p>
+    <h2 class="head serif"><em>CAD</em>bury your seat licence.</h2>
+    <svg class="bar" viewBox="0 0 300 350" aria-hidden="true">
+      <defs>
+                <linearGradient id="choc_face" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8a0b1a"/><stop offset="1" stop-color="#5a0711"/></linearGradient>
+        <pattern id="choc_cells" width="100" height="70" patternUnits="userSpaceOnUse">
+          <rect width="100" height="70" fill="#4a0710"/>
+          <polygon points="4,4 96,4 86,14 14,14" fill="#c62a3c"/>
+          <polygon points="4,4 14,14 14,56 4,66" fill="#a3172a"/>
+          <polygon points="96,4 96,66 86,56 86,14" fill="#4a0710"/>
+          <polygon points="4,66 14,56 86,56 96,66" fill="#36050c"/>
+          <rect x="14" y="14" width="72" height="42" fill="url(#choc_face)"/>
+        </pattern>
+        <clipPath id="choc_clip"><path d="M0 0H300V350H0Z M200 0H300V70H200Z" clip-rule="evenodd"/></clipPath>
+      </defs>
+      <rect width="300" height="350" fill="url(#choc_cells)" clip-path="url(#choc_clip)"/>
+      <g transform="translate(212 -34) rotate(14)"><rect width="100" height="70" fill="url(#choc_cells)"/></g>
+      <image href="campaign/logo.svg" x="-40" y="207" width="380" height="143"/>
+    </svg>
+    <div class="stack">
+      <p class="sub"><b>Every square is a build.</b> Snap off as many as you need. 2,000 a month are free at launch.</p>
+      <p class="p_note">Chocolate not included. Geometry is.</p>
+    </div>
+  </div>
+  <div class="ad_meta"><span><b>04</b> · CADbury</span><span>9:16</span></div>
+  <p class="copy_text">CADbury your seat licence.
+Every square is a build. Snap off as many as you need. BISCAD: 2,000 builds a month free at launch, then per build.</p>
+  <div class="ad_actions"><button type="button" data-action="download">Download PNG</button><button type="button" data-action="copy">Copy text</button></div>
+</article>
+<article class="ad" data-format="story" data-slug="05-never-sits-down">
+  <div class="poster p05" data-format="story">
+    <p class="p_eyebrow">Seat licence · status</p>
+    <svg class="chair" viewBox="0 0 200 230" fill="none" aria-hidden="true">
+      <g stroke="#a3938f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M58 18c0-8 6-12 14-12h56c8 0 14 4 14 12l-6 86c0 6-4 10-10 10H74c-6 0-10-4-10-10z"/>
+        <path d="M40 124h120c6 0 9 4 8 9l-3 10c-1 4-4 6-8 6H43c-4 0-7-2-8-6l-3-10c-1-5 2-9 8-9z"/>
+        <path d="M44 100v24M156 100v24M36 100h16M148 100h16"/>
+        <path d="M100 149v34M100 183l-52 18M100 183l52 18M100 183l-24 30M100 183l24 30M100 183v32"/>
+        <circle cx="46" cy="205" r="6"/><circle cx="154" cy="205" r="6"/><circle cx="74" cy="219" r="6"/><circle cx="126" cy="219" r="6"/><circle cx="100" cy="221" r="6"/>
+      </g>
+      <path d="M8 222 192 8" stroke="#c1162b" stroke-width="7" stroke-linecap="round"/>
+    </svg>
+    <div class="stack">
+      <h2 class="head serif">Your agent doesn’t need a seat.</h2>
+      <p class="sub">It never sits down.</p>
+    </div>
+    <div class="term"><b>$</b> claude mcp add --transport http \<br>&nbsp;&nbsp;biscad <i>https://biscad.dev/mcp</i><br><b>✓</b> priced per build</div>
+    <img class="p_word" src="campaign/wordmark.svg" alt="">
+  </div>
+  <div class="ad_meta"><span><b>05</b> · Never sits down</span><span>9:16</span></div>
+  <p class="copy_text">Your agent doesn’t need a seat. It never sits down.
+Add BISCAD to Claude Code in one line: claude mcp add --transport http biscad https://biscad.dev/mcp. Priced per build.</p>
+  <div class="ad_actions"><button type="button" data-action="download">Download PNG</button><button type="button" data-action="copy">Copy text</button></div>
+</article>
+<article class="ad" data-format="story" data-slug="07-its-february">
+  <div class="poster p07" data-format="story">
+    <p class="date">Tuesday, 3 February</p>
+    <p class="time">9:41</p>
+    <div class="note_card">
+      <div class="row"><span>Developer portal</span><span>now</span></div>
+      <h3>API calls remaining this year: 0</h3>
+      <p>Your annual call limit has been reached. Contact sales to continue.</p>
+    </div>
+    <div class="stack">
+      <h2 class="head serif">It’s <em>February.</em></h2>
+      <div class="toast"><i></i>build 4,812 · ok<span>p0 · 7 faces</span></div>
+      <p class="sub">BISCAD quotas reset every month. Paid plans bill per build. Your agent keeps working in March.</p>
+    </div>
+    <img class="p_band" src="campaign/logo.svg" alt="" width="1063" height="400">
+  </div>
+  <div class="ad_meta"><span><b>07</b> · It’s February</span><span>9:16</span></div>
+  <p class="copy_text">API calls remaining this year: 0. It’s February.
+Seat-licensed CAD APIs meter calls per year. BISCAD quotas reset every month, and paid plans bill per build.</p>
+  <div class="ad_actions"><button type="button" data-action="download">Download PNG</button><button type="button" data-action="copy">Copy text</button></div>
+</article>
+<article class="ad" data-format="story" data-slug="11-rest-in-pieces">
+  <div class="poster p11" data-format="story">
+    <div class="moon"></div>
+    <h2 class="head serif">Rest in <em>pieces.</em></h2>
+    <svg class="stone" viewBox="0 0 200 230" aria-hidden="true">
+      <path d="M20 230V80C20 34 56 6 100 6s80 28 80 74v150Z" fill="#efe6e1"/>
+      <path d="M20 230V80C20 34 56 6 100 6" fill="none" stroke="#fff" stroke-opacity="0.6" stroke-width="2"/>
+      <path d="M180 230V80c0-46-36-74-80-74" fill="none" stroke="#a3938f" stroke-width="4"/>
+      <text x="100" y="62" text-anchor="middle" font-family="DM Serif Display, Georgia, serif" font-size="30" fill="#0a0506">R.I.P.</text>
+      <text x="100" y="100" text-anchor="middle" font-family="DM Serif Display, Georgia, serif" font-size="19" fill="#0a0506">Per-seat pricing</text>
+      <text x="100" y="122" text-anchor="middle" font-family="DM Serif Display, Georgia, serif" font-style="italic" font-size="15" fill="#4a0710">for robots</text>
+      <path d="M70 140h60" stroke="#a3938f" stroke-width="1"/>
+      <text x="100" y="162" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8.5" letter-spacing="1.2" fill="#6e605d">5,000 CALLS · 1 HOUR</text>
+      <g transform="translate(148 196)"><path d="M0 34V8" stroke="#4fae7c" stroke-width="2"/><circle cx="0" cy="4" r="6" fill="#c1162b"/><circle cx="-6" cy="8" r="5" fill="#8a0b1a"/><circle cx="6" cy="8" r="5" fill="#8a0b1a"/></g>
+    </svg>
+    <div class="ground"></div>
+    <div class="stack">
+      <p class="sub">It had a good run.<br>Survived by per-build billing.</p>
+      <img class="p_word" src="campaign/wordmark.svg" alt="">
+      <p class="p_note">No company was harmed. Only a pricing model.</p>
+    </div>
+  </div>
+  <div class="ad_meta"><span><b>11</b> · Rest in pieces</span><span>9:16</span></div>
+  <p class="copy_text">Rest in pieces, per-seat pricing for robots.
+It had a good run. Survived by per-build billing. BISCAD.</p>
+  <div class="ad_actions"><button type="button" data-action="download">Download PNG</button><button type="button" data-action="copy">Copy text</button></div>
+</article>
+  </div>
+</section>
+</main>
+
+<footer class="colophon">
+  <span>BISCAD campaign · creatives are HTML/CSS/SVG · brand guide in brand/BRAND.md</span>
+  <span>Onshape facts: <a href="https://www.onshape.com/en/pricing" rel="noopener">pricing</a> · <a href="https://onshape-public.github.io/docs/auth/limits/" rel="noopener">API limits</a> · checked 2026-10-04</span>
+</footer>
+
+<div class="toast_live" role="status" aria-live="polite"></div>
+
+<script>
+const export_size_in_pixels_by_format = { square: [1080, 1080], story: [1080, 1920], banner: [1920, 1080] };
+const html_to_image_script_url = "https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js";
+const toast_element = document.querySelector(".toast_live");
+let toast_hide_timer_identifier = 0;
+
+function show_status_toast(message_text) {
+  toast_element.textContent = message_text;
+  toast_element.classList.add("is_visible");
+  clearTimeout(toast_hide_timer_identifier);
+  toast_hide_timer_identifier = setTimeout(() => toast_element.classList.remove("is_visible"), 1800);
+}
+
+function count_ads_per_format() {
+  document.querySelectorAll(".filters button").forEach((filter_button) => {
+    const filter_name = filter_button.dataset.filter;
+    const ad_selector = filter_name === "all" ? ".format_group .ad" : '.format_group[data-format="' + filter_name + '"] .ad';
+    filter_button.querySelector(".count").textContent = String(document.querySelectorAll(ad_selector).length);
+  });
+}
+
+function apply_format_filter(filter_name) {
+  document.querySelectorAll(".filters button").forEach((filter_button) => filter_button.setAttribute("aria-pressed", String(filter_button.dataset.filter === filter_name)));
+  document.querySelectorAll(".format_group").forEach((group_element) => { group_element.hidden = filter_name !== "all" && group_element.dataset.format !== filter_name; });
+}
+
+function read_copy_text_of_ad(ad_element) {
+  return ad_element.querySelector(".copy_text").innerText.trim();
+}
+
+async function copy_ad_text_to_clipboard(ad_element, pressed_button) {
+  try {
+    await navigator.clipboard.writeText(read_copy_text_of_ad(ad_element));
+    mark_button_as_done(pressed_button, "Copied");
+  } catch (clipboard_error) {
+    show_status_toast("Copy failed. Select the text and copy it by hand.");
+  }
+}
+
+function mark_button_as_done(pressed_button, done_label) {
+  const original_label = pressed_button.textContent;
+  pressed_button.textContent = done_label;
+  pressed_button.classList.add("is_done");
+  setTimeout(() => { pressed_button.textContent = original_label; pressed_button.classList.remove("is_done"); }, 1600);
+}
+
+let html_to_image_library_promise = null;
+let latin_font_embed_css_promise = null;
+
+function list_latin_font_face_rules() {
+  const latin_font_face_rules = [];
+  for (const style_sheet of document.styleSheets) {
+    let style_rules = [];
+    try { style_rules = [...style_sheet.cssRules]; } catch (cross_origin_error) { continue; }
+    latin_font_face_rules.push(...style_rules.filter((style_rule) => style_rule instanceof CSSFontFaceRule && style_rule.style.getPropertyValue("unicode-range").includes("U+0000-00FF")));
+  }
+  return latin_font_face_rules;
+}
+
+async function convert_url_to_data_url(resource_url) {
+  const font_response = await fetch(resource_url);
+  const font_blob = await font_response.blob();
+  return new Promise((resolve_data_url) => {
+    const blob_reader = new FileReader();
+    blob_reader.onload = () => resolve_data_url(blob_reader.result);
+    blob_reader.readAsDataURL(font_blob);
+  });
+}
+
+async function inline_font_face_rule(font_face_rule) {
+  const rule_text = font_face_rule.cssText;
+  const font_url_match = rule_text.match(/url\("?([^")]+)"?\)/);
+  if (!font_url_match) return rule_text;
+  const font_data_url = await convert_url_to_data_url(font_url_match[1]);
+  return rule_text.replace(font_url_match[0], 'url("' + font_data_url + '")');
+}
+
+function build_latin_font_embed_css() {
+  if (latin_font_embed_css_promise) return latin_font_embed_css_promise;
+  latin_font_embed_css_promise = Promise.all(list_latin_font_face_rules().map(inline_font_face_rule)).then((inlined_rules) => inlined_rules.join("\n"));
+  return latin_font_embed_css_promise;
+}
+
+function load_html_to_image_library() {
+  if (html_to_image_library_promise) return html_to_image_library_promise;
+  html_to_image_library_promise = new Promise((resolve_library, reject_library) => {
+    const script_element = document.createElement("script");
+    script_element.src = html_to_image_script_url;
+    script_element.onload = () => resolve_library(window.htmlToImage);
+    script_element.onerror = () => reject_library(new Error("html-to-image failed to load from " + html_to_image_script_url));
+    document.head.appendChild(script_element);
+  });
+  return html_to_image_library_promise;
+}
+
+async function download_ad_as_png(ad_element, pressed_button) {
+  const poster_element = ad_element.querySelector(".poster");
+  const [export_width_in_pixels, export_height_in_pixels] = export_size_in_pixels_by_format[poster_element.dataset.format];
+  pressed_button.textContent = "Rendering…";
+  try {
+    const [html_to_image_library, font_embed_css] = await Promise.all([load_html_to_image_library(), build_latin_font_embed_css()]);
+    const png_data_url = await html_to_image_library.toPng(poster_element, { pixelRatio: 1, canvasWidth: export_width_in_pixels, canvasHeight: export_height_in_pixels, fontEmbedCSS: font_embed_css });
+    const download_link = document.createElement("a");
+    download_link.href = png_data_url;
+    download_link.download = "biscad-" + ad_element.dataset.slug + ".png";
+    download_link.click();
+    pressed_button.textContent = "Download PNG";
+    mark_button_as_done(pressed_button, "Saved");
+  } catch (render_error) {
+    latin_font_embed_css_promise = null;
+    pressed_button.textContent = "Download PNG";
+    show_status_toast("PNG export failed: " + render_error.message);
+  }
+}
+
+document.querySelector(".filters").addEventListener("click", (click_event) => {
+  const filter_button = click_event.target.closest("button[data-filter]");
+  if (!filter_button) return;
+  apply_format_filter(filter_button.dataset.filter);
+});
+
+document.querySelector(".gallery").addEventListener("click", (click_event) => {
+  const action_button = click_event.target.closest("button[data-action]");
+  if (!action_button) return;
+  const ad_element = action_button.closest(".ad");
+  if (action_button.dataset.action === "copy") copy_ad_text_to_clipboard(ad_element, action_button);
+  if (action_button.dataset.action === "download") download_ad_as_png(ad_element, action_button);
+});
+
+count_ads_per_format();
+</script>
+</body>
+</html>

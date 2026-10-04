@@ -15,9 +15,14 @@ import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 
 THREE.Object3D.DEFAULT_UP.set(0, 0, 1);
 
-const ACCENT = 0xff5b1f;        // selection — international orange
-const AGENT = 0x2f6bff;         // highlight(ids) — what an agent is pointing at
-const INK = 0x1a1a1a;
+const ACCENT = 0xb3101f;        // selection — blood red
+const EMBER = 0xff4a3d;
+const AGENT = 0x4a8dff;         // highlight(ids) — what an agent is pointing at
+const BRASS = 0xc9a36a;         // dimensions and measurements
+
+const cube_edge_region_color = new THREE.Color(0x241c1d);
+const cube_face_rest_color = new THREE.Color(0xffffff);
+const cube_face_hover_color = new THREE.Color(0xc1162b).multiplyScalar(5);
 
 const VIEWS = {
   iso: [1, -1, 0.82],
@@ -72,6 +77,51 @@ function slerpDir(a, b, t, out) {
   }
   const s = Math.sin(th);
   return out.copy(a).multiplyScalar(Math.sin((1 - t) * th) / s).addScaledVector(b, Math.sin(t * th) / s).normalize();
+}
+
+function draw_dark_radial_viewport_background_texture() {
+  const size_in_pixels = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size_in_pixels;
+  const context = canvas.getContext('2d');
+  const gradient = context.createRadialGradient(size_in_pixels * 0.5, size_in_pixels * 0.42, 0, size_in_pixels * 0.5, size_in_pixels * 0.5, size_in_pixels * 0.75);
+  gradient.addColorStop(0, '#363031');
+  gradient.addColorStop(0.55, '#221d1e');
+  gradient.addColorStop(1, '#0f0a0b');
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, size_in_pixels, size_in_pixels);
+  add_dither_noise_to_canvas_against_banding(context, size_in_pixels);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+function add_dither_noise_to_canvas_against_banding(context, size_in_pixels) {
+  const image = context.getImageData(0, 0, size_in_pixels, size_in_pixels);
+  for (let byte_index = 0; byte_index < image.data.length; byte_index += 4) {
+    const noise_offset = (Math.random() - 0.5) * 3;
+    image.data[byte_index] += noise_offset;
+    image.data[byte_index + 1] += noise_offset;
+    image.data[byte_index + 2] += noise_offset;
+  }
+  context.putImageData(image, 0, 0);
+}
+
+function draw_floor_glow_texture() {
+  const size_in_pixels = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size_in_pixels;
+  const context = canvas.getContext('2d');
+  const half_size = size_in_pixels / 2;
+  const gradient = context.createRadialGradient(half_size, half_size, 0, half_size, half_size, half_size);
+  gradient.addColorStop(0, 'rgba(255, 226, 218, 0.55)');
+  gradient.addColorStop(0.45, 'rgba(255, 190, 180, 0.18)');
+  gradient.addColorStop(1, 'rgba(255, 190, 180, 0)');
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, size_in_pixels, size_in_pixels);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
 }
 
 function el(tag, cls, html) {
@@ -138,10 +188,10 @@ void main() {
   vec2 aw = fwidth(vWorld.xy) * 1.2;
   float ax = 1.0 - min(abs(vWorld.y) / aw.y, 1.0);
   float ay = 1.0 - min(abs(vWorld.x) / aw.x, 1.0);
-  float a = max(minor * 0.16, major * 0.34);
-  vec3 col = vec3(0.07);
-  if (ax > 0.01) { col = mix(col, vec3(0.82, 0.25, 0.2), ax); a = max(a, ax * 0.9); }
-  if (ay > 0.01) { col = mix(col, vec3(0.25, 0.6, 0.3), ay); a = max(a, ay * 0.9); }
+  float a = max(minor * 0.07, major * 0.15);
+  vec3 col = vec3(1.0, 0.88, 0.86);
+  if (ax > 0.01) { col = mix(col, vec3(0.86, 0.22, 0.22), ax); a = max(a, ax * 0.55); }
+  if (ay > 0.01) { col = mix(col, vec3(0.42, 0.7, 0.36), ay); a = max(a, ay * 0.55); }
   a *= uOpacity * fade;
   if (a <= 0.002) discard;
   gl_FragColor = vec4(col, a);
@@ -217,7 +267,7 @@ export class Viewer extends EventTarget {
     r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     r.outputColorSpace = THREE.SRGBColorSpace;
     r.toneMapping = THREE.NeutralToneMapping;
-    r.toneMappingExposure = 1.0;
+    r.toneMappingExposure = 0.9;
     r.localClippingEnabled = true;
     r.domElement.className = 'vc-canvas';
     r.domElement.setAttribute('tabindex', '0');
@@ -234,15 +284,7 @@ export class Viewer extends EventTarget {
 
   _initScene() {
     const scene = this.scene = new THREE.Scene();
-    // Soft vertical paper gradient behind the model
-    const c = document.createElement('canvas');
-    c.width = 4; c.height = 512;
-    const g = c.getContext('2d');
-    const grd = g.createLinearGradient(0, 0, 0, 512);
-    grd.addColorStop(0, '#fdfdfc'); grd.addColorStop(0.6, '#f6f6f4'); grd.addColorStop(1, '#ededea');
-    g.fillStyle = grd; g.fillRect(0, 0, 4, 512);
-    this._bgTex = new THREE.CanvasTexture(c);
-    this._bgTex.colorSpace = THREE.SRGBColorSpace;
+    this._bgTex = draw_dark_radial_viewport_background_texture();
     scene.background = this.opts.transparent ? null : this._bgTex;
 
     const pmrem = new THREE.PMREMGenerator(this.renderer);
@@ -251,18 +293,20 @@ export class Viewer extends EventTarget {
     room.dispose?.();
     pmrem.dispose();
     scene.environment = this._envRT.texture;
-    scene.environmentIntensity = 0.95;
+    scene.environmentIntensity = 0.5;
     scene.environmentRotation = new THREE.Euler(Math.PI / 2, 0, 0);  // env authored Y-up; we are Z-up
 
     // camera-relative key light for crisp definition
     this.lightRig = new THREE.Group();
-    const key = new THREE.DirectionalLight(0xffffff, 1.05);
+    const key = new THREE.DirectionalLight(0xffffff, 1.25);
     key.position.set(-0.6, 0.9, 1);
     const tgt = new THREE.Object3D(); tgt.position.set(0, 0, -1);
     key.target = tgt;
-    const fill = new THREE.DirectionalLight(0xffffff, 0.25);
+    const fill = new THREE.DirectionalLight(0xffffff, 0.22);
     fill.position.set(0.8, -0.4, 0.6); fill.target = tgt;
-    this.lightRig.add(key, fill, tgt);
+    const rim_light_from_behind = new THREE.DirectionalLight(0xffe6e0, 0.9);
+    rim_light_from_behind.position.set(0.4, 1.2, -2.2); rim_light_from_behind.target = tgt;
+    this.lightRig.add(key, fill, rim_light_from_behind, tgt);
     scene.add(this.lightRig);
 
     this.perspCam = new THREE.PerspectiveCamera(32, 1, 0.1, 10000);
@@ -302,15 +346,15 @@ export class Viewer extends EventTarget {
     this.pickLineMat.customProgramCacheKey = () => 'vc-pick-line';
     this.depthOnlyMat = new THREE.MeshBasicMaterial({ colorWrite: false, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
     this.overlayMats = {
-      select: new THREE.MeshStandardMaterial({ color: ACCENT, roughness: 0.55, metalness: 0, transparent: true, opacity: 0.8, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4, depthWrite: false }),
-      hover: new THREE.MeshStandardMaterial({ color: ACCENT, roughness: 0.6, metalness: 0, transparent: true, opacity: 0.28, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4, depthWrite: false }),
+      select: new THREE.MeshStandardMaterial({ color: ACCENT, roughness: 0.5, metalness: 0, transparent: true, opacity: 0.92, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4, depthWrite: false }),
+      hover: new THREE.MeshStandardMaterial({ color: EMBER, roughness: 0.6, metalness: 0, transparent: true, opacity: 0.3, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4, depthWrite: false }),
       agent: new THREE.MeshStandardMaterial({ color: AGENT, roughness: 0.55, metalness: 0, transparent: true, opacity: 0.55, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4, depthWrite: false }),
     };
     this.overlayLineMats = {
-      select: new LineMaterial({ color: ACCENT, linewidth: 3.2, worldUnits: false }),
-      hover: new LineMaterial({ color: ACCENT, linewidth: 2.6, worldUnits: false, transparent: true, opacity: 0.7 }),
+      select: new LineMaterial({ color: EMBER, linewidth: 3.2, worldUnits: false }),
+      hover: new LineMaterial({ color: EMBER, linewidth: 2.6, worldUnits: false, transparent: true, opacity: 0.7 }),
       agent: new LineMaterial({ color: AGENT, linewidth: 3.2, worldUnits: false }),
-      measure: new LineMaterial({ color: INK, linewidth: 1.4, worldUnits: false, depthTest: false, transparent: true }),
+      measure: new LineMaterial({ color: BRASS, linewidth: 1.6, worldUnits: false, depthTest: false, transparent: true }),
     };
     for (const m of [this.pickMat, this.depthOnlyMat, ...Object.values(this.overlayMats)]) m.clippingPlanes = this.clipPlanes;
     for (const m of [this.pickLineMat, ...Object.values(this.overlayLineMats)]) m.clippingPlanes = m === this.overlayLineMats.measure ? [] : this.clipPlanes;
@@ -340,8 +384,8 @@ export class Viewer extends EventTarget {
     this.shadowPlane = new THREE.Group();
     this.shadowPlane.userData.helper = true;
     this.shadowLayers = [
-      { size: 512, reach: 0.06, exp: 1.4, dark: 1.5, blur: [1.2, 0.6], opacity: 0.62 },
-      { size: 256, reach: 0.9, exp: 1.0, dark: 1.0, blur: [3.0, 1.6, 0.8], opacity: 0.26 },
+      { size: 512, reach: 0.06, exp: 1.4, dark: 1.6, blur: [1.2, 0.6], opacity: 0.9 },
+      { size: 256, reach: 0.9, exp: 1.0, dark: 1.0, blur: [3.0, 1.6, 0.8], opacity: 0.5 },
     ].map((L) => {
       L.rt = new THREE.WebGLRenderTarget(L.size, L.size); L.rt.texture.generateMipmaps = false;
       L.rtBlur = new THREE.WebGLRenderTarget(L.size, L.size); L.rtBlur.texture.generateMipmaps = false;
@@ -362,14 +406,17 @@ export class Viewer extends EventTarget {
       this.shadowPlane.add(L.plane);
       return L;
     });
+    this.floor_glow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: draw_floor_glow_texture(), transparent: true, depthWrite: false, toneMapped: false, opacity: this.opts.transparent ? 0.5 : 0.22 }));
+    this.floor_glow.renderOrder = -1.5;
+    this.shadowPlane.add(this.floor_glow);
     this.scene.add(this.shadowPlane);
     this._shadowDirty = true;
   }
 
   _initSectionHelper() {
     const g = new THREE.PlaneGeometry(1, 1);
-    this.sectionFill = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: ACCENT, transparent: true, opacity: 0.025, depthWrite: false, side: THREE.DoubleSide }));
-    const edges = new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({ color: ACCENT, transparent: true, opacity: 0.55 }));
+    this.sectionFill = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: EMBER, transparent: true, opacity: 0.04, depthWrite: false, side: THREE.DoubleSide }));
+    const edges = new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({ color: EMBER, transparent: true, opacity: 0.7 }));
     this.sectionHelper = new THREE.Group();
     this.sectionHelper.add(this.sectionFill, edges);
     this.sectionHelper.visible = false;
@@ -378,7 +425,7 @@ export class Viewer extends EventTarget {
   }
 
   _initCube() {
-    const cs = this.cube = { size: 112, margin: 10, scene: new THREE.Scene(), regions: [], hover: null };
+    const cs = this.cube = { size: 100, margin: 10, scene: new THREE.Scene(), regions: [], hover: null };
     cs.camera = new THREE.OrthographicCamera(-2.05, 2.05, 2.05, -2.05, 0.1, 20);
     const group = cs.group = new THREE.Group();
     cs.scene.add(group);
@@ -392,7 +439,7 @@ export class Viewer extends EventTarget {
       ['BOTTOM', [0, 0, -1], [1, 0, 0], [0, -1, 0]],
     ];
     const regionMat = new Map();
-    const base = new THREE.Color(0xfbfbfa);
+    const base = new THREE.Color(0xffffff);
     cs.textures = [];
     const spans = { '-1': [-1, -1 + b], '0': [-1 + b, 1 - b], '1': [1 - b, 1] };
     for (const [label, n, r, u] of faces) {
@@ -414,7 +461,7 @@ export class Viewer extends EventTarget {
           cs.textures.push([tex, label]);
           mat = new THREE.MeshBasicMaterial({ map: tex, color: base.clone(), toneMapped: false });
         } else {
-          if (!regionMat.has(key)) regionMat.set(key, new THREE.MeshBasicMaterial({ color: base.clone().multiplyScalar(0.965), toneMapped: false }));
+          if (!regionMat.has(key)) regionMat.set(key, new THREE.MeshBasicMaterial({ color: cube_edge_region_color, toneMapped: false }));
           mat = regionMat.get(key);
         }
         const m = new THREE.Mesh(geo, mat);
@@ -424,11 +471,11 @@ export class Viewer extends EventTarget {
         cs.regions.push(m);
       }
     }
-    const box = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(2, 2, 2)), new THREE.LineBasicMaterial({ color: 0x9a9a9a, toneMapped: false }));
+    const box = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(2, 2, 2)), new THREE.LineBasicMaterial({ color: 0x6e605d, toneMapped: false }));
     group.add(box);
     // axis triad from the back-left-bottom corner
     const o = new THREE.Vector3(-1.32, -1.32, -1.32);
-    const axes = [[[1, 0, 0], 0xd0453a, 'X'], [[0, 1, 0], 0x3f9a52, 'Y'], [[0, 0, 1], 0x3a66d0, 'Z']];
+    const axes = [[[1, 0, 0], 0xff5a4a, 'X'], [[0, 1, 0], 0x86c96f, 'Y'], [[0, 0, 1], 0x6b95ff, 'Z']];
     for (const [d, col, name] of axes) {
       const end = o.clone().addScaledVector(V(d), 1.25);
       const g = new THREE.BufferGeometry().setFromPoints([o, end]);
@@ -458,12 +505,12 @@ export class Viewer extends EventTarget {
 
   _drawCubeLabel(c, label) {
     const g = c.getContext('2d');
-    g.fillStyle = '#fbfbfa'; g.fillRect(0, 0, 256, 256);
-    g.fillStyle = '#2a2a2a';
+    g.fillStyle = '#2e2526'; g.fillRect(0, 0, 256, 256);
+    g.fillStyle = '#e6dcd7';
     g.textAlign = 'center'; g.textBaseline = 'middle';
-    const size = label.length > 5 ? 38 : 44;
-    g.font = `${size}px Michroma, Geist, sans-serif`;
-    if ('letterSpacing' in g) g.letterSpacing = '2px';
+    const size = label.length > 5 ? 40 : 46;
+    g.font = `600 ${size}px "IBM Plex Sans", system-ui, sans-serif`;
+    if ('letterSpacing' in g) g.letterSpacing = '4px';
     g.fillText(label, 128, 132);
   }
 
@@ -472,7 +519,7 @@ export class Viewer extends EventTarget {
     c.width = c.height = 64;
     const g = c.getContext('2d');
     g.fillStyle = '#' + col.toString(16).padStart(6, '0');
-    g.font = '600 40px Geist, sans-serif';
+    g.font = '600 40px "IBM Plex Sans", system-ui, sans-serif';
     g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillText(name, 32, 34);
     const t = new THREE.CanvasTexture(c);
@@ -655,12 +702,12 @@ export class Viewer extends EventTarget {
     geo.computeBoundingBox();
     geo.computeBoundingSphere();
 
-    const color = new THREE.Color(p.color || '#d9d7d2');
+    const color = new THREE.Color(p.color || '#c9c6c2');
     const hsl = {}; color.getHSL(hsl);
     const dark = hsl.l < 0.12;
     const mat = new THREE.MeshPhysicalMaterial({
-      color, roughness: dark ? 0.42 : 0.5, metalness: dark ? 0.15 : 0.02,
-      clearcoat: dark ? 0.35 : 0.22, clearcoatRoughness: 0.45, envMapIntensity: 1.0,
+      color, roughness: dark ? 0.38 : 0.46, metalness: dark ? 0.2 : 0.04,
+      clearcoat: dark ? 0.4 : 0.3, clearcoatRoughness: 0.38, envMapIntensity: dark ? 1.15 : 0.95,
       polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1, clippingPlanes: this.clipPlanes,
     });
     const xray = new THREE.MeshPhysicalMaterial({
@@ -711,7 +758,7 @@ export class Viewer extends EventTarget {
       const lg = new LineSegmentsGeometry();
       lg.setPositions(segArr);
       lg.setAttribute('instanceEdgeId', new THREE.InstancedBufferAttribute(new Float32Array(segIds), 1));
-      lineMat = new LineMaterial({ color: dark ? 0x8a8a8a : 0x161616, linewidth: 1.25, worldUnits: false, transparent: true, opacity: dark ? 0.85 : 0.9 });
+      lineMat = new LineMaterial({ color: dark ? 0x7d6e6b : 0x120c0d, linewidth: 1.15, worldUnits: false, transparent: true, opacity: dark ? 0.7 : 0.78 });
       lineMat.alphaToCoverage = false;
       lineMat.clippingPlanes = this.clipPlanes;
       this._lineMats.add(lineMat);
@@ -738,7 +785,7 @@ export class Viewer extends EventTarget {
         + pos[a + 2] * (pos[b] * pos[c + 1] - pos[b + 1] * pos[c])) / 6;
     }
     return {
-      id: p.id || `p${pi}`, name: p.name || `part ${pi}`, color: p.color || '#d9d7d2', index: pi, visible: true,
+      id: p.id || `p${pi}`, name: p.name || `part ${pi}`, color: p.color || '#c9c6c2', index: pi, visible: true,
       data: p, faces, edges, faceMap, edgeMap, segArr, geo, mesh, cap, lines, lineMat, mat, xray, capMat, group, overlays,
       triangles: idx.length / 3, box: geo.boundingBox.clone(), area, volume: Math.abs(vol), offset: new THREE.Vector3(),
     };
@@ -802,6 +849,8 @@ export class Viewer extends EventTarget {
     this.grid.scale.set(diag * 12, diag * 12, 1);
     this.grid.position.set(c.x, c.y, gz - diag * 0.0005);
     const sw = Math.max(size.x, size.y) * 1.25 + diag * 0.35;
+    this.floor_glow.scale.set(sw * 1.5, sw * 1.5, 1);
+    this.floor_glow.position.set(c.x, c.y, gz - diag * 0.0003);
     for (const L of this.shadowLayers) {
       L.plane.scale.set(-sw, sw, 1);   // mirrored: the shadow camera looks up
       L.plane.position.set(c.x, c.y, gz + (L.reach < 0.5 ? diag * 0.0002 : 0));
@@ -954,7 +1003,8 @@ export class Viewer extends EventTarget {
     for (const r of cs.regions) {
       const on = r.userData.key === key;
       const isFace = !!r.material.map;
-      r.material.color.set(on ? 0xffd9c9 : (isFace ? 0xfbfbfa : 0xf2f2f0));
+      if (isFace) r.material.color.copy(on ? cube_face_hover_color : cube_face_rest_color);
+      else r.material.color.set(on ? 0x8a0b1a : 0x241c1d);
     }
     this.renderer.domElement.style.cursor = key ? 'pointer' : '';
     this._dirty = true;
@@ -1388,7 +1438,7 @@ export class Viewer extends EventTarget {
       if (p.lines) {
         p.lines.visible = mode !== 'shaded';
         p.lineMat.depthTest = mode !== 'wireframe';
-        p.lineMat.opacity = mode === 'xray' ? 0.55 : (p.lineMat.color.r > 0.3 ? 0.85 : 0.9);
+        p.lineMat.opacity = mode === 'xray' ? 0.55 : (p.lineMat.color.r > 0.1 ? 0.7 : 0.78);
       }
     }
     this.shadowPlane.visible = this.state.shadow && mode !== 'wireframe' && mode !== 'hidden';
@@ -1596,8 +1646,8 @@ export class Viewer extends EventTarget {
       c.geometry?.dispose(); this.ghostRoot.remove(c);
     }
     if (!scene || !scene.parts) { this._dirty = true; return; }
-    const mat = this._ghostMat || (this._ghostMat = new THREE.MeshBasicMaterial({ color: 0x5b6b8a, transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide, clippingPlanes: this.clipPlanes }));
-    const lmat = this._ghostLineMat || (this._ghostLineMat = new THREE.LineBasicMaterial({ color: 0x5b6b8a, transparent: true, opacity: 0.35, depthWrite: false }));
+    const mat = this._ghostMat || (this._ghostMat = new THREE.MeshBasicMaterial({ color: 0xefe6e1, transparent: true, opacity: 0.07, depthWrite: false, side: THREE.DoubleSide, clippingPlanes: this.clipPlanes }));
+    const lmat = this._ghostLineMat || (this._ghostLineMat = new THREE.LineBasicMaterial({ color: 0xefe6e1, transparent: true, opacity: 0.28, depthWrite: false }));
     for (const p of scene.parts) {
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.BufferAttribute(f32(p.positions), 3));
@@ -1712,7 +1762,7 @@ export class Viewer extends EventTarget {
     line.renderOrder = 10;
     g.add(line);
     const dotGeo = new THREE.SphereGeometry(1, 16, 12);
-    const dotMat = this._dotMat || (this._dotMat = new THREE.MeshBasicMaterial({ color: ACCENT, depthTest: false, toneMapped: false }));
+    const dotMat = this._dotMat || (this._dotMat = new THREE.MeshBasicMaterial({ color: BRASS, depthTest: false, toneMapped: false }));
     for (const p of [p1, p2]) {
       const d = new THREE.Mesh(dotGeo, dotMat);
       d.position.copy(p); d.renderOrder = 11; d.userData.screenSize = 4;
@@ -1742,7 +1792,7 @@ export class Viewer extends EventTarget {
     const b = this._visibleBox();
     const g = new THREE.Group(); g.name = 'bbox';
     const geo = new THREE.EdgesGeometry(new THREE.BoxGeometry(...b.getSize(new THREE.Vector3()).toArray()));
-    const mat = this._bboxMat || (this._bboxMat = new THREE.LineDashedMaterial({ color: 0x6b6b6b, dashSize: 1, gapSize: 1, transparent: true, opacity: 0.7 }));
+    const mat = this._bboxMat || (this._bboxMat = new THREE.LineDashedMaterial({ color: BRASS, dashSize: 1, gapSize: 1, transparent: true, opacity: 0.6 }));
     const s = b.getSize(new THREE.Vector3());
     const dash = s.length() / 120;
     mat.dashSize = dash; mat.gapSize = dash * 0.8;
@@ -1866,20 +1916,23 @@ export const ICONS = {
   fit: svg('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/><rect x="8.5" y="8.5" width="7" height="7"/>'),
   persp: svg('<path d="M3 7l18-3v16L3 17z"/><path d="M3 12h18" stroke-dasharray="2 2"/>'),
   ortho: svg('<rect x="4" y="5" width="16" height="14"/><path d="M4 12h16" stroke-dasharray="2 2"/>'),
-  shaded: svg('<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z" fill="currentColor" fill-opacity=".18"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/>'),
+  'shade_shaded-edges': svg('<circle cx="12" cy="12" r="8" fill="currentColor" fill-opacity=".35"/><path d="M4 12h16M12 4c-2.5 2.2-2.5 13.8 0 16"/>'),
+  shade_shaded: svg('<circle cx="12" cy="12" r="8" fill="currentColor" fill-opacity=".85"/>'),
+  shade_hidden: svg('<circle cx="12" cy="12" r="8"/><path d="M4 12h16"/><path d="M12 4c-2.5 2.2-2.5 13.8 0 16" stroke-dasharray="1.6 2"/>'),
+  shade_wireframe: svg('<circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c-3 2.5-3 13.5 0 16M12 4c3 2.5 3 13.5 0 16M6 7h12M6 17h12"/>'),
+  shade_xray: svg('<circle cx="12" cy="12" r="8" fill="currentColor" fill-opacity=".15"/><path d="M12 4a8 8 0 010 16" fill="currentColor" fill-opacity=".35" stroke="none"/><circle cx="12" cy="12" r="3.5" stroke-dasharray="1.6 1.6"/>'),
+  overlays: svg('<circle cx="9" cy="10" r="5.5"/><circle cx="15" cy="14" r="5.5"/>'),
   bbox: svg('<rect x="4" y="4" width="16" height="16" stroke-dasharray="2.5 2"/><path d="M4 22h16M2 4v16"/>'),
   camera: svg('<path d="M3.5 8h4l1.5-2.5h6L16.5 8h4v11h-17z"/><circle cx="12" cy="13" r="3.5"/>'),
-  tree: svg('<path d="M4 5h6M4 12h6M4 19h6"/><rect x="13" y="3" width="7" height="4"/><rect x="13" y="10" width="7" height="4"/><rect x="13" y="17" width="7" height="4"/>'),
   help: svg('<circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 014.8.9c0 1.7-2.4 2.1-2.4 3.6"/><circle cx="12" cy="17" r=".6" fill="currentColor"/>'),
-  ao: svg('<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 000 16" fill="currentColor" fill-opacity=".2"/>'),
-  grid: svg('<path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>'),
   eye: svg('<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/>'),
   eyeOff: svg('<path d="M4 4l16 16"/><path d="M9.9 6A9.6 9.6 0 0112 5.5c6 0 9.5 6.5 9.5 6.5a16 16 0 01-2.8 3.5M6.3 7.6C3.9 9.4 2.5 12 2.5 12S6 18.5 12 18.5c1.5 0 2.8-.4 4-1"/>'),
   target: svg('<circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>'),
   copy: svg('<rect x="8" y="8" width="12" height="12"/><path d="M16 8V4H4v12h4"/>'),
   flip: svg('<path d="M12 3v18" stroke-dasharray="2 2"/><path d="M8 7L3 12l5 5zM16 7l5 5-5 5z"/>'),
-  close: svg('<path d="M6 6l12 12M18 6L6 18"/>'),
   play: svg('<path d="M7 4.5v15l12-7.5z" fill="currentColor"/>'),
+  step_previous: svg('<path d="M15 6l-6 6 6 6"/>'),
+  step_next: svg('<path d="M9 6l6 6-6 6"/>'),
   pause: svg('<path d="M7 5h3v14H7zM14 5h3v14h-3z" fill="currentColor" stroke="none"/>'),
   // operation glyphs for the steps timeline
   op_sketch: svg('<path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 7l3 3"/>'),
@@ -1912,7 +1965,7 @@ export function opIcon(op = '') {
 }
 
 /** Floating toolbar. items: list of keys or '|' separators. */
-export function mountToolbar(viewer, root, items = ['select', 'measure', 'section', 'explode', '|', 'views', 'fit', 'projection', '|', 'render', 'bbox', 'screenshot', 'help']) {
+export function mountToolbar(viewer, root, items = ['select', 'measure', 'section', 'explode', '|', 'views', 'fit', 'projection', '|', 'shading', 'overlays', 'bbox', 'screenshot', 'help']) {
   root.classList.add('vc-toolbar');
   const btns = {};
   const pops = [];
@@ -1920,7 +1973,7 @@ export function mountToolbar(viewer, root, items = ['select', 'measure', 'sectio
   document.addEventListener('pointerdown', (e) => { if (!root.contains(e.target)) closePops(); });
   const mk = (key, icon, title, onClick) => {
     const b = el('button', 'vc-tb', icon);
-    b.title = title; b.setAttribute('aria-label', title); b.dataset.key = key;
+    b.dataset.tip = title; b.setAttribute('aria-label', title); b.dataset.key = key;
     b.addEventListener('click', onClick);
     btns[key] = b;
     return b;
@@ -1935,10 +1988,10 @@ export function mountToolbar(viewer, root, items = ['select', 'measure', 'sectio
   };
   for (const key of items) {
     if (key === '|') { root.appendChild(el('span', 'vc-tbsep')); continue; }
-    if (key === 'select') root.appendChild(mk('select', ICONS.select, 'Select (Esc)', () => viewer.setTool('select')));
-    else if (key === 'measure') root.appendChild(mk('measure', ICONS.measure, 'Measure (M)', () => viewer.setTool(viewer.state.tool === 'measure' ? 'select' : 'measure')));
+    if (key === 'select') root.appendChild(mk('select', ICONS.select, 'Select · Esc', () => viewer.setTool('select')));
+    else if (key === 'measure') root.appendChild(mk('measure', ICONS.measure, 'Measure · M', () => viewer.setTool(viewer.state.tool === 'measure' ? 'select' : 'measure')));
     else if (key === 'section') {
-      const b = mk('section', ICONS.section, 'Section plane (S)', () => {});
+      const b = mk('section', ICONS.section, 'Section plane · S', () => {});
       const pop = el('div', '', `
         <div class="vc-pop-h"><span>Section</span><label class="vc-switch"><input type="checkbox" data-k="on"><i></i></label></div>
         <div class="vc-seg" data-k="axis"><button data-v="x">X</button><button data-v="y">Y</button><button data-v="z">Z</button><button data-v="face" title="Use selected planar face">Face</button></div>
@@ -1958,13 +2011,13 @@ export function mountToolbar(viewer, root, items = ['select', 'measure', 'sectio
       root.appendChild(withPop(b, pop));
       b._pop = pop;
     } else if (key === 'explode') {
-      const b = mk('explode', ICONS.explode, 'Explode (X)', () => {});
+      const b = mk('explode', ICONS.explode, 'Explode · X', () => {});
       const pop = el('div', '', `<div class="vc-pop-h"><span>Explode</span><span class="vc-mono" data-k="val">0%</span></div><input type="range" min="0" max="1" step="0.005" data-k="t">`);
       pop.querySelector('[data-k=t]').addEventListener('input', (e) => viewer.setExplode(+e.target.value));
       root.appendChild(withPop(b, pop));
       b._pop = pop;
     } else if (key === 'views') {
-      const b = mk('views', ICONS.cube, 'Standard views (1–7)', () => {});
+      const b = mk('views', ICONS.cube, 'Standard views · 1–7', () => {});
       const pop = el('div', 'vc-menu');
       VIEW_KEYS.forEach((v, i) => {
         const it = el('button', 'vc-menu-it', `<span>${v[0].toUpperCase() + v.slice(1)}</span><kbd>${i + 1}</kbd>`);
@@ -1972,18 +2025,20 @@ export function mountToolbar(viewer, root, items = ['select', 'measure', 'sectio
         pop.appendChild(it);
       });
       root.appendChild(withPop(b, pop));
-    } else if (key === 'fit') root.appendChild(mk('fit', ICONS.fit, 'Fit (F)', () => viewer.fit()));
-    else if (key === 'projection') root.appendChild(mk('projection', ICONS.persp, 'Perspective / orthographic (P)', () => viewer.setProjection(viewer.state.projection === 'perspective' ? 'orthographic' : 'perspective')));
-    else if (key === 'render') {
-      const b = mk('render', ICONS.shaded, 'Render mode (W)', () => {});
-      const pop = el('div', 'vc-menu');
-      for (const [k, label] of RENDER_MODES) {
-        const it = el('button', 'vc-menu-it', `<span>${label}</span>`);
-        it.dataset.mode = k;
-        it.addEventListener('click', () => { viewer.setRenderMode(k); closePops(); });
-        pop.appendChild(it);
+    } else if (key === 'fit') root.appendChild(mk('fit', ICONS.fit, 'Frame all · F', () => viewer.fit()));
+    else if (key === 'projection') root.appendChild(mk('projection', ICONS.persp, 'Perspective / orthographic · P', () => viewer.setProjection(viewer.state.projection === 'perspective' ? 'orthographic' : 'perspective')));
+    else if (key === 'shading') {
+      const shading_group = el('div', 'vc-shading');
+      for (const [render_mode, render_mode_label] of RENDER_MODES) {
+        const shading_button = mk('shade_' + render_mode, ICONS['shade_' + render_mode], render_mode_label + ' · W', () => viewer.setRenderMode(render_mode));
+        shading_button.dataset.mode = render_mode;
+        shading_group.appendChild(shading_button);
       }
-      pop.appendChild(el('div', 'vc-menu-sep'));
+      root.appendChild(shading_group);
+    } else if (key === 'overlays') {
+      const b = mk('overlays', ICONS.overlays, 'Viewport overlays', () => {});
+      const pop = el('div', 'vc-menu');
+      pop.appendChild(el('div', 'vc-pop-h', '<span>Overlays</span>'));
       for (const [k, label] of [['grid', 'Grid'], ['shadow', 'Ground shadow'], ['ao', 'Ambient occlusion']]) {
         const it = el('button', 'vc-menu-it vc-check', `<span>${label}</span><i></i>`);
         it.dataset.toggle = k;
@@ -1996,9 +2051,9 @@ export function mountToolbar(viewer, root, items = ['select', 'measure', 'sectio
       }
       root.appendChild(withPop(b, pop));
       b._pop = pop;
-    } else if (key === 'bbox') root.appendChild(mk('bbox', ICONS.bbox, 'Bounding box (B)', () => viewer.setBBox(!viewer.state.bbox)));
+    } else if (key === 'bbox') root.appendChild(mk('bbox', ICONS.bbox, 'Bounding box · B', () => viewer.setBBox(!viewer.state.bbox)));
     else if (key === 'screenshot') root.appendChild(mk('screenshot', ICONS.camera, 'Screenshot PNG', () => viewer.screenshot({ download: true, name: (viewer.sceneData?.name || 'biscad') + '.png' })));
-    else if (key === 'help') root.appendChild(mk('help', ICONS.help, 'Shortcuts (?)', () => viewer.toggleHelp()));
+    else if (key === 'help') root.appendChild(mk('help', ICONS.help, 'Shortcuts · ?', () => viewer.toggleHelp()));
     else if (typeof key === 'object') root.appendChild(mk(key.key, key.icon, key.title, key.onClick));
   }
   const sync = () => {
@@ -2023,11 +2078,8 @@ export function mountToolbar(viewer, root, items = ['select', 'measure', 'sectio
       if (document.activeElement !== r) r.value = s.explode;
       ep.querySelector('[data-k=val]').textContent = Math.round(s.explode * 100) + '%';
     }
-    const rp = btns.render?._pop;
-    if (rp) {
-      rp.querySelectorAll('[data-mode]').forEach((x) => x.classList.toggle('on', x.dataset.mode === s.renderMode));
-      rp.querySelectorAll('[data-toggle]').forEach((x) => x.classList.toggle('on', !!s[x.dataset.toggle]));
-    }
+    root.querySelectorAll('.vc-shading [data-mode]').forEach((x) => x.classList.toggle('on', x.dataset.mode === s.renderMode));
+    btns.overlays?._pop.querySelectorAll('[data-toggle]').forEach((x) => x.classList.toggle('on', !!s[x.dataset.toggle]));
   };
   viewer.addEventListener('statechange', sync);
   viewer.addEventListener('load', () => {
@@ -2167,7 +2219,9 @@ export class StepsBar {
     root.classList.add('vc-steps');
     root.innerHTML = `
       <div class="vc-steps-head">
-        <button class="vc-steps-play" title="Replay build">${ICONS.play}</button>
+        <button class="vc-steps-nav" data-step="-1" title="Previous step · ←">${ICONS.step_previous}</button>
+        <button class="vc-steps-play" title="Replay build · Space">${ICONS.play}</button>
+        <button class="vc-steps-nav" data-step="1" title="Next step · →">${ICONS.step_next}</button>
         <div class="vc-steps-cap"><span class="vc-steps-n"></span><span class="vc-steps-d"></span></div>
         <span class="vc-steps-meta"></span>
         <button class="vc-steps-final vc-mini" title="Show final model">Final</button>
@@ -2177,6 +2231,7 @@ export class StepsBar {
     this.playBtn = root.querySelector('.vc-steps-play');
     this.playBtn.addEventListener('click', () => (this.playing ? this.stop() : this.play()));
     root.querySelector('.vc-steps-final').addEventListener('click', () => this.showFinal());
+    root.querySelectorAll('.vc-steps-nav').forEach((navigation_button) => navigation_button.addEventListener('click', () => this.step_by(+navigation_button.dataset.step)));
     root.hidden = true;
   }
 
@@ -2227,6 +2282,12 @@ export class StepsBar {
   }
 
   showFinal() { this.stop(); this.go(this.steps.length - 1); }
+
+  step_by(step_offset) {
+    this.stop();
+    const target_step_index = Math.max(0, Math.min(this.steps.length - 1, this.current + step_offset));
+    if (target_step_index !== this.current) this.go(target_step_index);
+  }
 
   async play() {
     if (this.steps.length < 2) return;

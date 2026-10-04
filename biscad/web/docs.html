@@ -5,55 +5,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Docs — BISCAD</title>
   <meta name="description" content="BISCAD docs: quickstart, concepts, REST reference, MCP tools, script rules, limits and self-hosting.">
-  <meta name="theme-color" content="#fcfcfb">
+  <meta name="theme-color" content="#0a0506">
+  <meta name="color-scheme" content="dark">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Geist+Mono:wght@400;500&family=Michroma&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@800;900&family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/site.css">
-  <script>
-    (() => {
-      const pool = [["Clay plaster", "clay_plaster", 90], ["Brushed concrete", "brushed_concrete", 5], ["Aggregate", "concrete_floor_01", 5]];
-      let returning = false;
-      try { returning = localStorage.getItem("biscad-visited") === "1"; localStorage.setItem("biscad-visited", "1"); } catch (e) {}
-      let pick = pool[0];
-      if (returning) { let r = Math.random() * 100; for (const p of pool) { if ((r -= p[2]) < 0) { pick = p; break; } } }
-      window.BISCAD_MATERIAL = pick[0];
-      for (const f of ["normal", "orm"]) {
-        const l = document.createElement("link");
-        l.rel = "preload"; l.as = "image"; l.fetchPriority = "high";
-        l.href = `assets/textures/pbr/${pick[1]}/${f}.jpg`;
-        document.head.appendChild(l);
-      }
-    })();
-  </script>
 </head>
 <body>
-  <canvas id="material" aria-hidden="true"></canvas>
-  <canvas id="stars" aria-hidden="true"></canvas>
+  <canvas class="surface" aria-hidden="true"></canvas>
 
   <header class="top">
-    <a class="wordmark" href="index.html" aria-label="BISCAD home">BISCAD</a>
+    <a class="wordmark" href="index.html" aria-label="BISCAD home"><svg class="wordmark_svg" viewBox="0 0 1008.79 208.0" aria-hidden="true"><path fill="#efe6e1" d="M0 204V200.97L5.45 198.85Q11.52 196.42 13.79 192.79Q16.06 189.15 16.06 183.09V24.91Q16.06 18.55 13.79 14.91Q11.52 11.27 5.45 9.15L0 7.03V4H86.97Q123.94 4 140.3 17.48Q156.67 30.97 156.67 51.58Q156.67 67.03 144.7 79.61Q132.73 92.18 103.64 97.33Q136.97 100.97 152.42 114.76Q167.88 128.55 167.88 148.24Q167.88 157.94 163.64 167.79Q159.39 177.64 149.24 185.82Q139.09 194 121.52 199Q103.94 204 76.97 204ZM60.91 97.03H73.94Q94.24 97.03 103.18 87.64Q112.12 78.24 112.12 54.91Q112.12 30.67 103.94 20.36Q95.76 10.06 77.27 10.06H60.91ZM60.91 197.94H76.06Q98.79 197.94 109.85 185.82Q120.91 173.7 120.91 147.94Q120.91 123.7 110.3 113.39Q99.7 103.09 75.45 103.09H60.91ZM184.24 204V200.97L190.3 198.55Q196.36 196.42 198.33 192.79Q200.3 189.15 200.3 183.09V24.91Q200.3 18.85 198.48 15.21Q196.67 11.58 190.3 9.45L184.24 7.03V4H262.12V7.03L256.06 9.45Q250 11.58 248.03 15.21Q246.06 18.85 246.06 24.91V183.09Q246.06 189.15 248.03 192.64Q250 196.12 256.06 198.55L262.12 200.97V204ZM343.64 209.45Q326.97 209.45 309.7 205.36Q292.42 201.27 280.91 194.61L282.42 153.39H285.45L294.85 173.09Q299.09 181.58 303.94 188.09Q308.79 194.61 317.27 198.24Q323.33 201.27 328.94 202.33Q334.55 203.39 341.52 203.39Q360 203.39 370.76 193.39Q381.52 183.39 381.52 167.64Q381.52 152.79 374.24 144.45Q366.97 136.12 350.91 128.24L338.48 122.79Q312.42 111.27 297.73 96.27Q283.03 81.27 283.03 56.42Q283.03 38.55 292.27 25.52Q301.52 12.48 318.03 5.52Q334.55 -1.45 356.67 -1.45Q372.73 -1.45 387.12 2.79Q401.52 7.03 412.12 14.3L410.3 50.67H407.27L394.85 27.94Q389.7 17.33 384.55 12.94Q379.39 8.55 372.73 6.73Q368.79 5.52 365.45 5.06Q362.12 4.61 356.97 4.61Q341.52 4.61 330.91 13.55Q320.3 22.48 320.3 37.64Q320.3 53.09 328.48 62.33Q336.67 71.58 352.42 78.85L366.36 84.91Q395.45 97.64 408.18 112.03Q420.91 126.42 420.91 149.15Q420.91 175.82 400.76 192.64Q380.61 209.45 343.64 209.45ZM543.64 209.45Q514.24 209.45 490.45 197.48Q466.67 185.52 452.73 161.88Q438.79 138.24 438.79 104Q438.79 77.94 447.27 58.24Q455.76 38.55 470.45 25.21Q485.15 11.88 504.39 5.21Q523.64 -1.45 545.15 -1.45Q562.42 -1.45 576.97 2.48Q591.52 6.42 604.24 13.39L605.45 50.67H602.42L587.27 26.42Q584.24 20.67 580.61 15.97Q576.97 11.27 571.52 8.85Q566.97 6.73 562.58 5.67Q558.18 4.61 551.52 4.61Q533.94 4.61 519.55 14Q505.15 23.39 496.52 45.06Q487.88 66.73 487.88 104.3Q487.88 141.58 496.06 163.24Q504.24 184.91 518.33 194.15Q532.42 203.39 550 203.39Q559.7 203.39 565.45 202.03Q571.21 200.67 576.97 197.94Q582.73 195.52 585.76 190.82Q588.79 186.12 591.21 180.67L604.55 150.97H607.58L606.67 194.3Q593.94 200.97 578.18 205.21Q562.42 209.45 543.64 209.45ZM620.91 204V200.97L628.48 198.24Q634.55 195.82 637.88 192.33Q641.21 188.85 643.33 182.48L705.76 3.39H731.52L793.03 183.7Q795.45 190.36 798.48 193.85Q801.52 197.33 807.88 199.76L811.52 200.97V204H734.55V200.97L739.09 199.45Q745.45 197.03 746.82 192.64Q748.18 188.24 746.36 182.18L732.12 138.55H664.85L650.3 181.27Q648.18 187.94 648.94 191.88Q649.7 195.82 656.06 198.24L662.73 200.97V204ZM666.97 132.48H730.3L699.7 38.24ZM825.15 204V200.97L831.52 198.55Q841.21 194.61 841.21 183.09V24.91Q841.21 12.79 831.52 9.45L825.15 7.03V4H905.15Q937.27 4 960.45 15.97Q983.64 27.94 996.21 50.21Q1008.79 72.48 1008.79 103.7Q1008.79 135.52 995.15 157.94Q981.52 180.36 957.12 192.18Q932.73 204 899.7 204ZM886.67 197.94H899.7Q921.52 197.94 934.85 189.3Q948.18 180.67 954.39 160.21Q960.61 139.76 960.61 104Q960.61 68.24 954.39 47.79Q948.18 27.33 935.15 18.7Q922.12 10.06 900.91 10.06H886.67Z"/></svg></a>
+    <nav class="top_nav" aria-label="Main">
+      <a href="studio.html">Studio</a>
+      <a href="docs.html" aria-current="page">Docs</a>
+      <a class="wide_only" href="index.html#pricing">Pricing</a>
+      <a class="btn btn_small" href="index.html#key">Get a key</a>
+    </nav>
   </header>
 
-  <nav class="dock" aria-label="Quick links">
-    <a href="studio.html" aria-label="Studio" data-tip="Studio">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-    </a>
-    <a href="docs.html" aria-label="Docs" data-tip="Docs" aria-current="page">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg>
-    </a>
-    <a href="#reference" aria-label="API reference" data-tip="API">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></svg>
-    </a>
-    <!-- TODO: real contact address -->
-    <a href="mailto:" aria-label="Contact" data-tip="Contact">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-    </a>
-  </nav>
-
-  <div class="docs-shell">
-    <aside class="docs-nav" aria-label="Docs sections">
+  <div class="docs_shell">
+    <aside class="docs_nav" aria-label="Docs sections">
       <div class="group">
         <span class="label">Start</span>
         <a href="#quickstart">Quickstart</a>
@@ -83,20 +57,19 @@
       </div>
     </aside>
 
-    <main class="docs-main">
-      <nav class="docs-mobile-nav" aria-label="Docs sections">
+    <main class="docs_main">
+      <nav class="docs_mobile_nav" aria-label="Docs sections">
         <a href="#quickstart">Quickstart</a><a href="#concepts">Concepts</a><a href="#scripts">Scripts</a><a href="#reference">REST</a><a href="#mcp">MCP</a><a href="#limits">Limits</a><a href="#self-host">Self-host</a>
       </nav>
 
-      <header class="docs-hero">
+      <header class="docs_hero">
         <span class="label">Documentation</span>
-        <h1 class="product-name">BISCAD</h1>
+        <h1>BISCAD docs</h1>
         <p>A hosted build123d / OpenCascade kernel behind a REST API and an MCP server. Send a Python script, get back a B-rep with stable face ids, renders, analysis and exports.</p>
-        <div class="base"><span class="label">Base URL</span><code class="inline host">https://api.biscad.dev</code><a class="explorer" href="/api/docs">Interactive API explorer →</a></div>
+        <div class="base"><span class="label">Base URL</span><code class="host">https://api.biscad.dev</code><a class="explorer" href="/api/docs">Interactive API explorer →</a></div>
       </header>
 
-      <!-- ============================================================ Quickstart -->
-      <section class="doc-section" id="quickstart">
+      <section class="doc_section" id="quickstart">
         <span class="label">Start</span>
         <h2>Quickstart</h2>
         <div class="prose">
@@ -104,7 +77,7 @@
           <h3>1 · Get a key</h3>
         </div>
         <div class="code">
-          <div class="code-bar"><span class="title">shell</span><button class="copy" type="button" data-copy aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy-label">Copy</span></button></div>
+          <div class="code_bar"><span class="title">shell</span><button class="copy" type="button" data-copy aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy_label">Copy</span></button></div>
 <pre><code>curl -s -X POST <span class="host">https://api.biscad.dev</span>/v1/keys \
   -H <span class="s">"Content-Type: application/json"</span> -d <span class="s">'{"email": "you@company.com"}'</span>
 <span class="c"># → {"api_key": "bsc_…", "plan": "free"}</span>
@@ -113,7 +86,7 @@ export BISCAD_KEY=bsc_…</code></pre>
         <div class="prose"><p>Or use the form on the <a href="index.html#key">home page</a>.</p><h3>2 · Build a part</h3>
           <p><code>POST /v1/build</code> is stateless: it runs the script and returns a summary and a scene. Nothing is stored.</p></div>
         <div class="code">
-          <div class="code-bar"><span class="title">shell</span><button class="copy" type="button" data-copy aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy-label">Copy</span></button></div>
+          <div class="code_bar"><span class="title">shell</span><button class="copy" type="button" data-copy aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy_label">Copy</span></button></div>
 <pre><code>curl -s <span class="host">https://api.biscad.dev</span>/v1/build \
   -H <span class="s">"Authorization: Bearer $BISCAD_KEY"</span> -H <span class="s">"Content-Type: application/json"</span> \
   -d <span class="s">'{"script": "from build123d import *\nparams = {\"w\": 40}\nresult = Box(params[\"w\"], 30, 6)", "params": {"w": 60}}'</span>
@@ -122,7 +95,7 @@ export BISCAD_KEY=bsc_…</code></pre>
         <div class="prose"><h3>3 · Save and export</h3>
           <p>Save the script as a document to get a version id, then download any format.</p></div>
         <div class="code">
-          <div class="code-bar"><span class="title">shell</span><button class="copy" type="button" data-copy aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy-label">Copy</span></button></div>
+          <div class="code_bar"><span class="title">shell</span><button class="copy" type="button" data-copy aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy_label">Copy</span></button></div>
 <pre><code>VID=$(curl -s <span class="host">https://api.biscad.dev</span>/v1/documents \
   -H <span class="s">"Authorization: Bearer $BISCAD_KEY"</span> -H <span class="s">"Content-Type: application/json"</span> \
   -d <span class="s">'{"name": "plate", "script": "from build123d import *\nresult = Box(60, 30, 6)"}'</span> | jq -r .version.id)
@@ -132,8 +105,7 @@ curl -s <span class="s">"<span class="host">https://api.biscad.dev</span>/v1/ver
         </div>
       </section>
 
-      <!-- ============================================================ Concepts -->
-      <section class="doc-section" id="concepts">
+      <section class="doc_section" id="concepts">
         <span class="label">Concepts</span>
         <h2>Documents, versions, params</h2>
         <div class="prose">
@@ -159,7 +131,7 @@ curl -s <span class="s">"<span class="host">https://api.biscad.dev</span>/v1/ver
           <p>What the viewer draws, from <code>GET /v1/versions/{vid}/scene</code> and the <code>scene</code> field of a build. Arrays are base64 little-endian typed arrays. A face's triangles are contiguous, so <code>start</code>/<code>count</code> map a picked triangle back to its face id.</p>
         </div>
         <div class="code">
-          <div class="code-bar"><span class="title">scene.json</span></div>
+          <div class="code_bar"><span class="title">scene.json</span></div>
 <pre><code>{
   <span class="k">"format"</span>: <span class="s">"biscad-scene"</span>, <span class="k">"version"</span>: <span class="n">1</span>, <span class="k">"units"</span>: <span class="s">"mm"</span>,
   <span class="k">"bbox"</span>: { <span class="k">"min"</span>: [x, y, z], <span class="k">"max"</span>: [x, y, z] },
@@ -176,8 +148,7 @@ curl -s <span class="s">"<span class="host">https://api.biscad.dev</span>/v1/ver
         <div class="prose"><p>Cylindrical, conical, spherical and toroidal faces also carry <code>radius</code> and <code>axis</code>.</p></div>
       </section>
 
-      <!-- ============================================================ Scripts -->
-      <section class="doc-section" id="scripts">
+      <section class="doc_section" id="scripts">
         <span class="label">Scripts</span>
         <h2>Script rules</h2>
         <div class="prose">
@@ -193,7 +164,7 @@ curl -s <span class="s">"<span class="host">https://api.biscad.dev</span>/v1/ver
           </ul>
         </div>
         <div class="code">
-          <div class="code-bar"><span class="title">bracket.py</span><button class="copy" type="button" data-copy aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy-label">Copy</span></button></div>
+          <div class="code_bar"><span class="title">bracket.py</span><button class="copy" type="button" data-copy aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy_label">Copy</span></button></div>
 <pre><code><span class="k">from</span> build123d <span class="k">import</span> *
 
 params = {<span class="s">"width"</span>: <span class="n">60</span>, <span class="s">"height"</span>: <span class="n">40</span>, <span class="s">"thickness"</span>: <span class="n">6</span>, <span class="s">"hole"</span>: <span class="n">6.5</span>}
@@ -213,8 +184,7 @@ result = bracket.part</code></pre>
         </div>
       </section>
 
-      <!-- ============================================================ REST -->
-      <section class="doc-section" id="reference">
+      <section class="doc_section" id="reference">
         <span class="label">REST API</span>
         <h2>Reference</h2>
         <div class="prose">
@@ -244,7 +214,7 @@ result = bracket.part</code></pre>
         <div class="endpoint">
           <div><div class="sig"><span class="verb">POST</span>/v1/build</div>
             <div class="desc"><p>Stateless build. Runs the script, returns a summary and a scene. Nothing is stored. Use it for fast iteration; save with <code>/v1/documents</code> when you want ids that last. <code>links</code> gives ready-made URLs for the scene, renders, report, explainer, exports and a shareable viewer.</p>
-              <div class="table-x"><table class="params"><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
+              <div class="table_x"><table class="params"><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
                 <tr><td>script</td><td>build123d source. Required.</td></tr>
                 <tr><td>params</td><td>Overrides for the script's <code>params</code> dict.</td></tr>
                 <tr><td>quality</td><td>Tessellation quality: <code>draft</code>, <code>normal</code> (default) or <code>fine</code>. Geometry and exports are exact either way.</td></tr>
@@ -269,7 +239,7 @@ result = bracket.part</code></pre>
         <div class="endpoint">
           <div><div class="sig"><span class="verb">POST</span>/v1/documents</div>
             <div class="desc"><p>Create a document and build its first version.</p>
-              <div class="table-x"><table class="params"><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
+              <div class="table_x"><table class="params"><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
                 <tr><td>name</td><td>Display name. Required.</td></tr>
                 <tr><td>script</td><td>build123d source.</td></tr>
                 <tr><td>features</td><td>Feature list (alternative to a script).</td></tr>
@@ -292,7 +262,7 @@ result = bracket.part</code></pre>
         <div class="endpoint">
           <div><div class="sig"><span class="verb">POST</span>/v1/documents/{id}/versions</div>
             <div class="desc"><p>Build a new version. Omitted fields are inherited from <code>parent</code> (default: the document head, its latest successful version). Pass an older <code>parent</code> to branch.</p>
-              <div class="table-x"><table class="params"><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
+              <div class="table_x"><table class="params"><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
                 <tr><td>script</td><td>New source.</td></tr>
                 <tr><td>params</td><td>Param overrides, e.g. a new configuration.</td></tr>
                 <tr><td>features</td><td>Feature list.</td></tr>
@@ -338,7 +308,7 @@ result = bracket.part</code></pre>
         <div class="endpoint">
           <div><div class="sig"><span class="verb get">GET</span>/v1/versions/{vid}/render.png</div>
             <div class="desc"><p>Headless render. Agents use this to see what they built.</p>
-              <div class="table-x"><table class="params"><thead><tr><th>Query</th><th>Description</th></tr></thead><tbody>
+              <div class="table_x"><table class="params"><thead><tr><th>Query</th><th>Description</th></tr></thead><tbody>
                 <tr><td>view</td><td><code>iso</code> (default), <code>front</code>, <code>top</code>, <code>right</code>, <code>back</code>, <code>left</code>, <code>bottom</code></td></tr>
                 <tr><td>w, h</td><td>Size in pixels.</td></tr>
                 <tr><td>highlight</td><td>Comma-separated ids to highlight and label, e.g. <code>p0/f3,p0/e2</code></td></tr>
@@ -424,25 +394,27 @@ result = bracket.part</code></pre>
         </div>
       </section>
 
-      <!-- ============================================================ MCP -->
-      <section class="doc-section" id="mcp">
+      <section class="doc_section" id="mcp">
         <span class="label">MCP</span>
         <h2>MCP server</h2>
-        <div class="prose"><p>Streamable HTTP at <code class="host-mcp">https://api.biscad.dev/mcp</code>. Tools mirror the REST API. Render tools return images, so the model sees the part.</p></div>
+        <div class="prose"><p>Streamable HTTP at <code class="host_mcp">https://api.biscad.dev/mcp</code>. Tools mirror the REST API. Render tools return images, so the model sees the part.</p></div>
         <div class="code">
-          <div class="code-bar"><span class="title">Claude Code</span><button class="copy" type="button" data-copy aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy-label">Copy</span></button></div>
-<pre><code>claude mcp add --transport http biscad <span class="host-mcp">https://api.biscad.dev/mcp</span> \
-  --header <span class="s">"Authorization: Bearer <span class="api-key">bsc_...</span>"</span></code></pre>
+          <div class="code_bar"><span class="title">Claude Code</span><button class="copy" type="button" data-copy aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy_label">Copy</span></button></div>
+<pre><code>claude mcp add --transport http biscad <span class="host_mcp">https://api.biscad.dev/mcp</span> \
+  --header <span class="s">"Authorization: Bearer <span class="api_key">bsc_...</span>"</span></code></pre>
         </div>
         <div class="code">
-          <div class="code-bar"><span class="title">Claude Desktop · Cursor</span><button class="copy" type="button" data-copy aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy-label">Copy</span></button></div>
+          <div class="code_bar"><span class="title">Claude Desktop · Cursor</span><button class="copy" type="button" data-copy aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy_label">Copy</span></button></div>
 <pre><code>{ <span class="k">"mcpServers"</span>: { <span class="k">"biscad"</span>: {
-    <span class="k">"url"</span>: <span class="s">"<span class="host-mcp">https://api.biscad.dev/mcp</span>"</span>,
-    <span class="k">"headers"</span>: { <span class="k">"Authorization"</span>: <span class="s">"Bearer <span class="api-key">bsc_...</span>"</span> } } } }</code></pre>
+    <span class="k">"url"</span>: <span class="s">"<span class="host_mcp">https://api.biscad.dev/mcp</span>"</span>,
+    <span class="k">"headers"</span>: { <span class="k">"Authorization"</span>: <span class="s">"Bearer <span class="api_key">bsc_...</span>"</span> } } } }</code></pre>
         </div>
-        <div class="tool-list">
+        <div class="tool_list">
           <div><code>build_model</code><span>Run a script statelessly. Returns ok, error, logs, summary.</span></div>
           <div><code>create_document</code><span>Save a script as a new document; returns document and version ids.</span></div>
+          <div><code>list_documents</code><span>Your documents, newest first.</span></div>
+          <div><code>get_document</code><span>One document and its versions.</span></div>
+          <div><code>get_script</code><span>The script and params of a version.</span></div>
           <div><code>update_document</code><span>New version from a script and/or params; optional parent to branch.</span></div>
           <div><code>get_topology</code><span>Face and edge descriptors with ids like <code>p0/f3</code>.</span></div>
           <div><code>render_view</code><span>PNG of one view, with optional highlighted, labelled ids.</span></div>
@@ -451,19 +423,21 @@ result = bracket.part</code></pre>
           <div><code>section</code><span>Plane section: area and SVG profile.</span></div>
           <div><code>mass_properties</code><span>Volume, area, mass at a density, centre of mass.</span></div>
           <div><code>check_manufacturability</code><span>DFM report for fdm, cnc or sheet.</span></div>
+          <div><code>check_interference</code><span>Clashes between parts, with overlap volume.</span></div>
+          <div><code>bill_of_materials</code><span>Identical parts grouped, with quantity and size.</span></div>
           <div><code>export_model</code><span>Download URL for step, stl, glb, 3mf, brep, svg or dxf.</span></div>
           <div><code>diff_versions</code><span>Volume and faces added or removed between two versions.</span></div>
           <div><code>list_examples</code><span>Example scripts to start from.</span></div>
           <div><code>get_build_steps</code><span>The build-step replay in plain English.</span></div>
+          <div><code>usage</code><span>Your plan, usage this month and limits.</span></div>
         </div>
         <div class="callout">A good agent loop: <code>build_model</code> → <code>render_grid</code> → fix → <code>create_document</code> → <code>check_manufacturability</code> → <code>export_model</code>. Use <code>get_topology</code> before referring to a face.</div>
       </section>
 
-      <!-- ============================================================ Limits -->
-      <section class="doc-section" id="limits">
+      <section class="doc_section" id="limits">
         <span class="label">Limits</span>
         <h2>Limits &amp; pricing</h2>
-        <div class="table-x">
+        <div class="table_x">
           <table class="params">
             <thead><tr><th></th><th>Free</th><th>Pro</th><th>Scale</th></tr></thead>
             <tbody>
@@ -480,19 +454,18 @@ result = bracket.part</code></pre>
         </div>
       </section>
 
-      <!-- ============================================================ Self-host -->
-      <section class="doc-section" id="self-host">
+      <section class="doc_section" id="self-host">
         <span class="label">Self-hosting</span>
         <h2>Run it yourself</h2>
         <div class="prose"><p>Open source, free to self-host. One container serves the API, the MCP server and this site.</p></div>
         <div class="code">
-          <div class="code-bar"><span class="title">shell</span><button class="copy" type="button" data-copy aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy-label">Copy</span></button></div>
+          <div class="code_bar"><span class="title">shell</span><button class="copy" type="button" data-copy aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy_label">Copy</span></button></div>
 <pre><code>docker run -p <span class="n">8000</span>:<span class="n">8000</span> biscad
 <span class="c"># → http://localhost:8000  (site, /v1, /mcp)</span></code></pre>
         </div>
         <div class="prose"><p>Need a public URL for a remote agent? This starts the server and opens a Cloudflare quick tunnel. No account needed.</p></div>
         <div class="code">
-          <div class="code-bar"><span class="title">shell</span><button class="copy" type="button" data-copy aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy-label">Copy</span></button></div>
+          <div class="code_bar"><span class="title">shell</span><button class="copy" type="button" data-copy aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H3V3h12v2"/></svg><span class="copy_label">Copy</span></button></div>
 <pre><code>./deploy/public.sh
 <span class="c"># → https://&lt;random&gt;.trycloudflare.com</span></code></pre>
         </div>
@@ -502,10 +475,8 @@ result = bracket.part</code></pre>
       <footer class="legal">© 2026 BISCAD</footer>
     </main>
   </div>
-
-  <script src="js/material.js"></script>
-  <script src="js/stars.js"></script>
   <script src="js/config.js"></script>
   <script src="js/site.js"></script>
+  <script type="module" src="js/surface.js"></script>
 </body>
 </html>

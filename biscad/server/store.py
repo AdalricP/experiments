@@ -1,21 +1,20 @@
-"""SQLite store: API keys, documents, versions, usage metering."""
 from __future__ import annotations
 
 import hashlib
 import json
 import os
 import secrets
+import shutil
 import sqlite3
 import threading
 import time
 
-DATA = os.environ.get("BISCAD_DATA", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data"))
-DATA = os.path.abspath(DATA)
-os.makedirs(os.path.join(DATA, "versions"), exist_ok=True)
-DB = os.path.join(DATA, "biscad.db")
+DATA_DIRECTORY = os.path.abspath(os.environ.get(
+    "BISCAD_DATA", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")))
+os.makedirs(os.path.join(DATA_DIRECTORY, "versions"), exist_ok=True)
+DATABASE_PATH = os.path.join(DATA_DIRECTORY, "biscad.db")
 
 PLANS = {
-    # builds/month, compute seconds/month, requests/minute, max build seconds
     "anon": {"builds_month": 300, "compute_s_month": 600, "rpm": 30, "timeout_s": 30, "agent_runs_month": 0},
     "free": {"builds_month": 2000, "compute_s_month": 3600, "rpm": 120, "timeout_s": 60,
              "agent_runs_month": int(os.environ.get("BISCAD_FREE_AGENT_RUNS", "10"))},
@@ -23,9 +22,6 @@ PLANS = {
     "unlimited": {"builds_month": 10**12, "compute_s_month": 10**12, "rpm": 100000, "timeout_s": 600,
                   "agent_runs_month": 10**9},
 }
-
-_local = threading.local()
-_lock = threading.Lock()
 
 SCHEMA = """
 create table if not exists keys(
@@ -42,150 +38,153 @@ create index if not exists versions_doc on versions(document_id, created);
 create index if not exists docs_owner on documents(owner, updated);
 """
 
-
-def db() -> sqlite3.Connection:
-    c = getattr(_local, "conn", None)
-    if c is None:
-        c = sqlite3.connect(DB, timeout=30, check_same_thread=False)
-        c.row_factory = sqlite3.Row
-        c.execute("pragma journal_mode=wal")
-        c.executescript(SCHEMA)
-        _local.conn = c
-    return c
+_connection_per_thread = threading.local()
+_write_lock = threading.Lock()
 
 
-def new_id(prefix: str) -> str:
+def _connection_for_current_thread() -> sqlite3.Connection:
+    connection = getattr(_connection_per_thread, "connection", None)
+    if connection is not None:
+        return connection
+    connection = sqlite3.connect(DATABASE_PATH, timeout=30, check_same_thread=False)
+    connection.row_factory = sqlite3.Row
+    connection.execute("pragma journal_mode=wal")
+    connection.executescript(SCHEMA)
+    _connection_per_thread.connection = connection
+    return connection
+
+
+def _query_rows(statement: str, parameters: tuple) -> list[sqlite3.Row]:
+    return _connection_for_current_thread().execute(statement, parameters).fetchall()
+
+
+def _execute_writes_atomically(*statements_with_parameters: tuple[str, tuple]):
+    with _write_lock:
+        connection = _connection_for_current_thread()
+        for statement, parameters in statements_with_parameters:
+            connection.execute(statement, parameters)
+        connection.commit()
+
+
+def new_random_id_with_prefix(prefix: str) -> str:
     return prefix + "_" + secrets.token_urlsafe(9).replace("-", "x").replace("_", "z")
 
 
-def _hash(key: str) -> str:
-    return hashlib.sha256(key.encode()).hexdigest()
+def _sha256_hex_of_api_key(api_key: str) -> str:
+    return hashlib.sha256(api_key.encode()).hexdigest()
 
 
-# ------------------------------------------------------------------ keys
-
-def create_key(email: str, plan: str = "free") -> dict:
-    key = "bsc_" + secrets.token_urlsafe(24)
-    kid = new_id("usr")
-    with _lock:
-        db().execute("insert into keys values(?,?,?,?,?)", (kid, email, _hash(key), plan, time.time()))
-        db().commit()
-    return {"api_key": key, "owner": kid, "plan": plan}
+def _insert_api_key_statement(owner_id: str, email: str, api_key: str, plan: str) -> tuple[str, tuple]:
+    return "insert into keys values(?,?,?,?,?)", (owner_id, email, _sha256_hex_of_api_key(api_key), plan, time.time())
 
 
-def lookup_key(key: str) -> dict | None:
-    row = db().execute("select * from keys where key_hash=?", (_hash(key),)).fetchone()
-    return dict(row) if row else None
+def create_api_key(email: str, plan: str = "free") -> dict:
+    api_key = "bsc_" + secrets.token_urlsafe(24)
+    owner_id = new_random_id_with_prefix("usr")
+    _execute_writes_atomically(_insert_api_key_statement(owner_id, email, api_key, plan))
+    return {"api_key": api_key, "owner": owner_id, "plan": plan}
 
 
-def ensure_admin_key():
-    """BISCAD_ADMIN_KEY env var -> an unlimited key (for the owner)."""
-    k = os.environ.get("BISCAD_ADMIN_KEY")
-    if k and not lookup_key(k):
-        with _lock:
-            db().execute("insert into keys values(?,?,?,?,?)", ("usr_admin", "admin", _hash(k), "unlimited", time.time()))
-            db().commit()
+def find_api_key_row(api_key: str) -> dict | None:
+    rows = _query_rows("select * from keys where key_hash=?", (_sha256_hex_of_api_key(api_key),))
+    return dict(rows[0]) if rows else None
 
 
-# ------------------------------------------------------------------ usage
+def ensure_admin_api_key_from_environment():
+    admin_api_key = os.environ.get("BISCAD_ADMIN_KEY")
+    if admin_api_key and not find_api_key_row(admin_api_key):
+        _execute_writes_atomically(_insert_api_key_statement("usr_admin", "admin", admin_api_key, "unlimited"))
 
-def month() -> str:
+
+def current_month_label() -> str:
     return time.strftime("%Y-%m")
 
 
-def record_usage(owner: str, builds=0, calls=1, compute_ms=0):
-    with _lock:
-        db().execute("""insert into usage(owner, month, builds, calls, compute_ms) values(?,?,?,?,?)
-            on conflict(owner, month) do update set builds=builds+excluded.builds,
-            calls=calls+excluded.calls, compute_ms=compute_ms+excluded.compute_ms""",
-                     (owner, month(), builds, calls, int(compute_ms)))
-        db().commit()
+def record_usage(owner: str, build_count=0, call_count=1, compute_milliseconds=0):
+    _execute_writes_atomically(("""insert into usage(owner, month, builds, calls, compute_ms) values(?,?,?,?,?)
+        on conflict(owner, month) do update set builds=builds+excluded.builds,
+        calls=calls+excluded.calls, compute_ms=compute_ms+excluded.compute_ms""",
+                                (owner, current_month_label(), build_count, call_count, int(compute_milliseconds))))
 
 
-def get_usage(owner: str) -> dict:
-    row = db().execute("select * from usage where owner=? and month=?", (owner, month())).fetchone()
-    return {"month": month(), "builds": row["builds"] if row else 0, "calls": row["calls"] if row else 0,
-            "compute_ms": row["compute_ms"] if row else 0}
+def usage_this_month(owner: str) -> dict:
+    rows = _query_rows("select * from usage where owner=? and month=?", (owner, current_month_label()))
+    counters = {counter: rows[0][counter] if rows else 0 for counter in ("builds", "calls", "compute_ms")}
+    return {"month": current_month_label(), **counters}
 
 
-# ------------------------------------------------------------------ documents / versions
-
-def vdir(vid: str) -> str:
-    safe = "".join(ch for ch in vid if ch.isalnum() or ch in "_-")
-    return os.path.join(DATA, "versions", safe)
+def directory_for_version(version_id: str) -> str:
+    safe_version_id = "".join(character for character in version_id if character.isalnum() or character in "_-")
+    return os.path.join(DATA_DIRECTORY, "versions", safe_version_id)
 
 
-def create_document(owner: str, name: str, public: bool) -> dict:
-    did = new_id("doc")
+def _document_from_row(row: sqlite3.Row) -> dict:
+    return dict(row) | {"public": bool(row["public"])}
+
+
+def create_document(owner: str, name: str, is_public: bool) -> dict:
+    document_id = new_random_id_with_prefix("doc")
     now = time.time()
-    with _lock:
-        db().execute("insert into documents values(?,?,?,?,?,?,?)", (did, owner, name, int(public), now, now, None))
-        db().commit()
-    return get_document(did)
+    _execute_writes_atomically(("insert into documents values(?,?,?,?,?,?,?)",
+                                (document_id, owner, name, int(is_public), now, now, None)))
+    return get_document(document_id)
 
 
-def get_document(did: str) -> dict | None:
-    row = db().execute("select * from documents where id=?", (did,)).fetchone()
-    if not row:
-        return None
-    d = dict(row)
-    d["public"] = bool(d["public"])
-    return d
+def get_document(document_id: str) -> dict | None:
+    rows = _query_rows("select * from documents where id=?", (document_id,))
+    return _document_from_row(rows[0]) if rows else None
 
 
 def list_documents(owner: str, limit=100) -> list[dict]:
-    rows = db().execute("select * from documents where owner=? order by updated desc limit ?", (owner, limit)).fetchall()
-    return [dict(r) | {"public": bool(r["public"])} for r in rows]
+    rows = _query_rows("select * from documents where owner=? order by updated desc limit ?", (owner, limit))
+    return [_document_from_row(row) for row in rows]
 
 
-def rename_document(did: str, name=None, public=None):
-    with _lock:
-        if name is not None:
-            db().execute("update documents set name=? where id=?", (name, did))
-        if public is not None:
-            db().execute("update documents set public=? where id=?", (int(public), did))
-        db().commit()
+def update_document_name_and_visibility(document_id: str, name=None, is_public=None):
+    name_update = [("update documents set name=? where id=?", (name, document_id))] if name is not None else []
+    visibility_update = ([("update documents set public=? where id=?", (int(is_public), document_id))]
+                         if is_public is not None else [])
+    _execute_writes_atomically(*name_update, *visibility_update)
 
 
-def delete_document(did: str):
-    import shutil
-    vids = [r["id"] for r in db().execute("select id from versions where document_id=?", (did,))]
-    with _lock:
-        db().execute("delete from versions where document_id=?", (did,))
-        db().execute("delete from documents where id=?", (did,))
-        db().commit()
-    for v in vids:
-        shutil.rmtree(vdir(v), ignore_errors=True)
+def delete_document_and_its_versions(document_id: str):
+    version_ids = [row["id"] for row in _query_rows("select id from versions where document_id=?", (document_id,))]
+    _execute_writes_atomically(("delete from versions where document_id=?", (document_id,)),
+                               ("delete from documents where id=?", (document_id,)))
+    for version_id in version_ids:
+        shutil.rmtree(directory_for_version(version_id), ignore_errors=True)
 
 
-def save_version(vid, did, parent, script, params, message, result, owner) -> dict:
+def _document_head_update(document_id: str | None, version_id: str, is_build_ok: bool, now: float) -> list:
+    if not document_id:
+        return []
+    if is_build_ok:
+        return [("update documents set updated=?, head=? where id=?", (now, version_id, document_id))]
+    return [("update documents set updated=? where id=?", (now, document_id))]
+
+
+def save_version(version_id, document_id, parent, script, params, message, build_outcome, owner) -> dict:
     now = time.time()
-    with _lock:
-        db().execute("insert into versions values(?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
-            vid, did, parent, script, json.dumps(params or {}), message or "",
-            "ok" if result["ok"] else "error", result.get("error"), result.get("logs", ""),
-            json.dumps(result.get("summary")), json.dumps(result.get("param_schema", [])),
-            json.dumps(result.get("steps", [])), now, owner))
-        if did:
-            if result["ok"]:
-                db().execute("update documents set updated=?, head=? where id=?", (now, vid, did))
-            else:
-                db().execute("update documents set updated=? where id=?", (now, did))
-        db().commit()
-    return get_version(vid)
+    version_row = (
+        version_id, document_id, parent, script, json.dumps(params or {}), message or "",
+        "ok" if build_outcome["ok"] else "error", build_outcome.get("error"), build_outcome.get("logs", ""),
+        json.dumps(build_outcome.get("summary")), json.dumps(build_outcome.get("param_schema", [])),
+        json.dumps(build_outcome.get("steps", [])), now, owner)
+    _execute_writes_atomically(("insert into versions values(?,?,?,?,?,?,?,?,?,?,?,?,?,?)", version_row),
+                               *_document_head_update(document_id, version_id, build_outcome["ok"], now))
+    return get_version(version_id)
 
 
-def get_version(vid: str) -> dict | None:
-    row = db().execute("select * from versions where id=?", (vid,)).fetchone()
-    if not row:
+def get_version(version_id: str) -> dict | None:
+    rows = _query_rows("select * from versions where id=?", (version_id,))
+    if not rows:
         return None
-    v = dict(row)
-    for k in ("params", "summary", "param_schema", "steps"):
-        v[k] = json.loads(v[k]) if v[k] else None
-    return v
+    version = dict(rows[0])
+    json_columns = ("params", "summary", "param_schema", "steps")
+    return version | {column: json.loads(version[column]) if version[column] else None for column in json_columns}
 
 
-def list_versions(did: str) -> list[dict]:
-    rows = db().execute("select id, parent, message, status, error, created from versions where document_id=? order by created",
-                        (did,)).fetchall()
-    return [dict(r) for r in rows]
+def list_version_history(document_id: str) -> list[dict]:
+    rows = _query_rows("select id, parent, message, status, error, created from versions "
+                       "where document_id=? order by created", (document_id,))
+    return [dict(row) for row in rows]

@@ -41,9 +41,6 @@ Minimal script:
 - POST /v1/build {script, params?, quality?: draft|normal|fine} → {ok, error?, logs, summary, scene, links:{scene, render, render_grid, report, explainer, step, stl, glb, viewer}}
 - POST /v1/documents {name, script?, features?, params?, public?} → {document, version}
 - GET  /v1/documents → {documents}; GET /v1/documents/{id} → {document, versions}
-- GET  /v1/versions/{vid}/interference → {clashes:[{a,b,volume_mm3,center}], ok}
-- GET  /v1/versions/{vid}/bom?density= → {items:[{item,name,quantity,ids,size_mm,volume_mm3}]}
-- POST /v1/agent {prompt, script?, document_id?} → {ok, version, rounds} (text-to-CAD; needs a key and server-side ANTHROPIC_API_KEY)
 - POST /v1/documents/{id}/versions {script?, params?, features?, parent?, message?} → {version}
 - GET  /v1/versions/{vid} → {id, document_id, parent, script, params, param_schema, status, error, logs, summary, created}
 - GET  /v1/versions/{vid}/scene → scene JSON (format "biscad-scene" v1; base64 float32 positions/normals, uint32 indices; faces with start/count triangle ranges)
@@ -59,8 +56,11 @@ Minimal script:
 - GET  /v1/versions/{vid}/mass?density=7.85 (g/cm³)
 - POST /v1/versions/{vid}/check {process:"fdm"|"cnc"|"sheet"} → DFM report
 - GET  /v1/diff?a={vid}&b={vid} → {volume_added, volume_removed, faces_added, faces_removed}
+- GET  /v1/versions/{vid}/interference → {clashes:[{a,b,volume_mm3,center}], ok}
+- GET  /v1/versions/{vid}/bom?density= → {items:[{item,name,quantity,ids,size_mm,volume_mm3}]}
+- POST /v1/agent {prompt, script?, document_id?} → {ok, version, rounds} (text-to-CAD; needs a key and server-side ANTHROPIC_API_KEY)
 - POST /v1/import multipart `file` (step/stp/brep/stl) → {document, version}
-- GET  /v1/examples → [{id, name, script}]  (bracket, flange, gear, enclosure, leg)
+- GET  /v1/examples → [{id, name, script}]  (quadruped, bracket, flange, gear, enclosure, leg)
 
 A failed build is HTTP 200 with ok=false and an `error` message; fix the script and retry. HTTP 429 means quota exceeded.
 
@@ -68,7 +68,7 @@ Interactive API explorer (OpenAPI): /api/docs ; schema: /openapi.json
 
 ## MCP tools
 
-build_model, create_document, update_document, get_topology, render_view, render_grid, measure, section, mass_properties, check_manufacturability, export_model, diff_versions, list_examples, get_build_steps.
+build_model, create_document, update_document, list_documents, get_document, get_script, get_topology, render_view, render_grid, get_build_steps, measure, section, mass_properties, check_manufacturability, check_interference, bill_of_materials, diff_versions, export_model, list_examples, usage.
 
 Setup:
 - Claude Code: `claude mcp add --transport http biscad https://<host>/mcp --header "Authorization: Bearer bsc_..."`
@@ -76,7 +76,7 @@ Setup:
 
 ## Limits and pricing
 
-- Free: 2,000 builds/month, all exports, MCP, no card.
+- Free: 2,000 builds/month, 10 text-to-CAD runs/month, all exports, MCP, no card.
 - Pro: $12/month, 100,000 builds/month, 3-minute builds, priority workers.
 - Scale: $0.0004 per build-second. Self-hosting is free (open source).
 

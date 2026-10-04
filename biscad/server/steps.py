@@ -1,16 +1,11 @@
-"""Build-step capture: replay how a part was built, one operation at a time.
-
-Every build123d operation funnels geometry through `Builder._add_to_context`. We wrap it,
-and after each call that changed a BuildPart we snapshot the part, the operation name, the
-script line, and the key arguments. Descriptions are written in short, controlled sentences
-(ASD-STE100 style: one instruction per sentence, active voice, simple verbs) so a human can
-review an agent's model at a glance.
-"""
 from __future__ import annotations
 
+import contextlib
 import sys
 
-OP_VERBS = {
+from build123d import BuildPart, Mode, Shape, build_common
+
+OPERATION_VERBS = {
     "extrude": "Extrude", "revolve": "Revolve", "loft": "Loft", "sweep": "Sweep",
     "fillet": "Fillet", "chamfer": "Chamfer", "offset": "Shell", "mirror": "Mirror",
     "split": "Split", "thicken": "Thicken", "section": "Section", "project": "Project",
@@ -19,190 +14,219 @@ OP_VERBS = {
     "Torus": "Add a torus", "Wedge": "Add a wedge", "Hole": "Drill a hole",
     "CounterBoreHole": "Drill a counterbored hole", "CounterSinkHole": "Drill a countersunk hole",
 }
-ICON = {
+OPERATION_ICONS = {
     "extrude": "extrude", "revolve": "revolve", "loft": "loft", "sweep": "sweep", "fillet": "fillet",
     "chamfer": "chamfer", "offset": "shell", "mirror": "mirror", "split": "split", "Hole": "hole",
     "CounterBoreHole": "hole", "CounterSinkHole": "hole", "Box": "primitive", "Cylinder": "primitive",
     "Sphere": "primitive", "Cone": "primitive", "Torus": "primitive", "Wedge": "primitive",
 }
-ARG_NAMES = ("amount", "radius", "length", "width", "height", "depth", "angle", "revolution_arc",
-             "counter_bore_radius", "counter_sink_radius", "length2", "thickness", "until")
-MAX_STEPS = 80
-LABELS = {"CounterBoreHole": "counterbored hole", "CounterSinkHole": "countersunk hole", "Hole": "hole",
-          "offset": "shell", "make_brake_formed": "bend", "Box": "box", "Cylinder": "cylinder",
-          "Sphere": "sphere", "Cone": "cone", "Torus": "torus", "Wedge": "wedge"}
+OPERATION_LABELS = {"CounterBoreHole": "counterbored hole", "CounterSinkHole": "countersunk hole", "Hole": "hole",
+                    "offset": "shell", "make_brake_formed": "bend", "Box": "box", "Cylinder": "cylinder",
+                    "Sphere": "sphere", "Cone": "cone", "Torus": "torus", "Wedge": "wedge"}
+RECORDED_ARGUMENT_NAMES = ("amount", "radius", "length", "width", "height", "depth", "angle", "revolution_arc",
+                           "counter_bore_radius", "counter_sink_radius", "length2", "thickness", "until")
+SHAPE_DIMENSION_ATTRIBUTES = (("radius", "radius"), ("length", "length"), ("width", "width"), ("height", "height"),
+                              ("height", "cylinder_height"), ("depth", "hole_depth"), ("angle", "angle"))
+DECORATOR_FUNCTION_NAMES = ("wrapper", "wrapped", "inner")
+HOLE_OPERATIONS = ("Hole", "CounterBoreHole", "CounterSinkHole")
+MAX_RECORDED_STEPS = 80
 
 
-def _fmt(v):
-    if isinstance(v, bool) or v is None:
+def _format_argument_value(raw_value):
+    if isinstance(raw_value, bool) or raw_value is None:
         return None
-    if isinstance(v, (int, float)):
-        return f"{v:g}"
-    name = getattr(v, "name", None)
-    if isinstance(name, str):
-        return name.lower()
-    return None
+    if isinstance(raw_value, (int, float)):
+        return f"{raw_value:g}"
+    enum_name = getattr(raw_value, "name", None)
+    return enum_name.lower() if isinstance(enum_name, str) else None
+
+
+def _library_frames_below_script(starting_frame):
+    library_frames = []
+    frame = starting_frame
+    while frame is not None and frame.f_code.co_filename != "<script>":
+        library_frames.append(frame)
+        frame = frame.f_back
+    return library_frames, (frame.f_lineno if frame is not None else None)
+
+
+def _shape_dimension_arguments(shape) -> dict:
+    arguments = {}
+    for argument_name, attribute_name in SHAPE_DIMENSION_ATTRIBUTES:
+        formatted = None if argument_name in arguments else _format_argument_value(getattr(shape, attribute_name, None))
+        if formatted is not None and formatted != "0" and len(formatted) < 20:
+            arguments[argument_name] = formatted
+    return arguments
+
+
+def _identify_operation(library_frames: list):
+    script_side_first = list(reversed(library_frames))
+    for frame in script_side_first:
+        frame_self = frame.f_locals.get("self")
+        if isinstance(frame_self, Shape):
+            return type(frame_self).__name__, frame, _shape_dimension_arguments(frame_self)
+    for frame in script_side_first:
+        function_name = frame.f_code.co_name
+        if not function_name.startswith("_") and function_name not in DECORATOR_FUNCTION_NAMES:
+            return function_name, frame, {}
+    if not library_frames:
+        return "operation", None, {}
+    function_name = library_frames[-1].f_code.co_name
+    return ("sketch" if function_name == "__exit__" else function_name.strip("_")), None, {}
+
+
+def _arguments_from_frame_locals(frame_locals, operation: str) -> dict:
+    arguments = {}
+    for argument_name in RECORDED_ARGUMENT_NAMES:
+        formatted = _format_argument_value(frame_locals[argument_name]) if argument_name in frame_locals else None
+        if formatted is not None:
+            arguments[argument_name] = formatted
+    if "objects" in frame_locals and operation in ("fillet", "chamfer"):
+        with contextlib.suppress(Exception):
+            arguments["count"] = str(len(list(frame_locals["objects"])))
+    return arguments
+
+
+def _without_through_hole_depth(arguments: dict, operation: str, part) -> dict:
+    if "depth" not in arguments or not operation.endswith("Hole"):
+        return arguments
+    try:
+        is_through_hole = float(arguments["depth"]) >= 0.9 * part.bounding_box().diagonal
+    except Exception:
+        return arguments
+    return {name: formatted for name, formatted in arguments.items() if name != "depth"} if is_through_hole else arguments
 
 
 class StepRecorder:
     def __init__(self):
         self.steps = []
-        self._orig = None
+        self._original_add_to_context = None
 
     def install(self):
-        from build123d import build_common
-        from build123d import BuildPart, Mode
-        rec = self
-        orig = build_common.Builder._add_to_context
-        self._orig = orig
+        original_add_to_context = build_common.Builder._add_to_context
+        self._original_add_to_context = original_add_to_context
+        recorder = self
 
-        def wrapped(builder, *objects, **kw):
-            before = builder._obj if isinstance(builder, BuildPart) else None
-            result = orig(builder, *objects, **kw)
-            try:
-                if isinstance(builder, BuildPart) and kw.get("mode", Mode.ADD) != Mode.PRIVATE \
-                        and builder._obj is not None and builder._obj is not before \
-                        and len(rec.steps) < MAX_STEPS:
-                    rec._record(builder, kw.get("mode", Mode.ADD))
-            except Exception:
-                pass
-            return result
+        def add_to_context_and_record_step(builder, *objects, **keyword_arguments):
+            part_before = builder._obj if isinstance(builder, BuildPart) else None
+            add_outcome = original_add_to_context(builder, *objects, **keyword_arguments)
+            with contextlib.suppress(Exception):
+                recorder._record_if_part_changed(builder, part_before, keyword_arguments.get("mode", Mode.ADD),
+                                                 sys._getframe(1))
+            return add_outcome
 
-        build_common.Builder._add_to_context = wrapped
+        build_common.Builder._add_to_context = add_to_context_and_record_step
 
     def uninstall(self):
-        if self._orig is not None:
-            from build123d import build_common
-            build_common.Builder._add_to_context = self._orig
+        if self._original_add_to_context is not None:
+            build_common.Builder._add_to_context = self._original_add_to_context
 
-    def _record(self, builder, mode):
-        # Frames between the user's script and this call
-        chain = []
-        f = sys._getframe(2)
-        line = None
-        while f is not None:
-            if f.f_code.co_filename == "<script>":
-                line = f.f_lineno
-                break
-            chain.append(f)
-            f = f.f_back
-        op, args, src_frame = "operation", {}, None
-        from build123d import Shape
-        for fr in reversed(chain):                      # script side first
-            nm = fr.f_code.co_name
-            slf = fr.f_locals.get("self")
-            if isinstance(slf, Shape):
-                op, src_frame = type(slf).__name__, fr
-                for a, attr in (("radius", "radius"), ("length", "length"), ("width", "width"),
-                                ("height", "height"), ("height", "cylinder_height"), ("depth", "hole_depth"),
-                                ("angle", "angle")):
-                    s = _fmt(getattr(slf, attr, None)) if a not in args else None
-                    if s is not None and s not in ("0",) and len(s) < 20:
-                        args[a] = s
-                break
-        if src_frame is None:
-            for fr in reversed(chain):
-                nm = fr.f_code.co_name
-                if not nm.startswith("_") and nm not in ("wrapper", "wrapped", "inner"):
-                    op, src_frame = nm, fr
-                    break
-        if src_frame is None and chain:
-            nm = chain[-1].f_code.co_name
-            op = "sketch" if nm == "__exit__" else nm.strip("_")
-        if src_frame is not None:
-            loc = src_frame.f_locals
-            for a in ARG_NAMES:
-                if a in loc:
-                    s = _fmt(loc[a])
-                    if s is not None:
-                        args[a] = s
-            if "objects" in loc and op in ("fillet", "chamfer"):
-                try:
-                    args["count"] = str(len(list(loc["objects"])))
-                except Exception:
-                    pass
+    def _record_if_part_changed(self, builder, part_before, mode, calling_frame):
+        if isinstance(builder, BuildPart) and mode != Mode.PRIVATE and builder._obj is not None \
+                and builder._obj is not part_before and len(self.steps) < MAX_RECORDED_STEPS:
+            self._record(builder, mode, calling_frame)
+
+    def _record(self, builder, mode, calling_frame):
+        library_frames, script_line_number = _library_frames_below_script(calling_frame)
+        operation, source_frame, arguments = _identify_operation(library_frames)
+        if source_frame is not None:
+            arguments = arguments | _arguments_from_frame_locals(source_frame.f_locals, operation)
         part = builder.part
-        if "depth" in args and op.endswith("Hole"):
-            try:
-                if float(args["depth"]) >= 0.9 * part.bounding_box().diagonal:
-                    del args["depth"]
-            except Exception:
-                pass
         self.steps.append({
-            "op": op, "mode": getattr(mode, "name", str(mode)).lower(), "line": line, "args": args,
-            "builder": id(builder), "shape": part,
+            "op": operation, "mode": getattr(mode, "name", str(mode)).lower(), "line": script_line_number,
+            "args": _without_through_hole_depth(arguments, operation, part), "builder": id(builder), "shape": part,
         })
 
 
-def describe(step, prev_volume, volume, faces):
-    op, mode, a = step["op"], step["mode"], step["args"]
-    dv = volume - (prev_volume or 0.0)
-    verb = OP_VERBS.get(op, op.replace("_", " ").capitalize())
-    s = []
-    if op == "extrude":
-        amt = a.get("amount")
+def _count_phrase_for_edges(edge_count: str | None) -> str:
+    if edge_count == "1":
+        return "1 edge"
+    return f"{edge_count} edges" if edge_count else "the edges"
+
+
+def _diameter_text(radius: str | None) -> str | None:
+    return f"{float(radius) * 2:g}" if radius else None
+
+
+def _first_sentence_for_operation(operation: str, mode: str, arguments: dict, verb: str) -> str:
+    if operation == "extrude":
+        amount = arguments.get("amount")
         if mode == "subtract":
-            s.append(f"Cut the sketch {amt} mm into the part." if amt else "Cut the sketch into the part.")
-        else:
-            s.append(f"Extrude the sketch {amt} mm." if amt else "Extrude the sketch.")
-    elif op == "revolve":
-        s.append(f"Revolve the sketch {a.get('revolution_arc', '360')}°.")
-    elif op in ("fillet", "chamfer"):
-        n = a.get("count")
-        size = a.get("radius") or a.get("length")
-        what = f"{n} edges" if n and n != "1" else "1 edge" if n == "1" else "the edges"
-        s.append(f"{verb} {what}" + (f" with {'radius' if op == 'fillet' else 'size'} {size} mm." if size else "."))
-    elif op == "offset":
-        s.append(f"Shell the part. Wall thickness is {a.get('amount', '?').lstrip('-')} mm.")
-    elif op in ("Hole", "CounterBoreHole", "CounterSinkHole"):
-        r = a.get("radius")
-        d = f"{float(r) * 2:g}" if r else None
-        s.append(f"{verb}" + (f" of diameter {d} mm" if d else "") +
-                 (f", {a['depth']} mm deep." if a.get("depth") else ", through the part."))
-    elif op == "Box":
-        s.append(f"Add a box {a.get('length', '?')} × {a.get('width', '?')} × {a.get('height', '?')} mm.")
-    elif op == "Cylinder":
-        r = a.get("radius")
-        s.append(f"Add a cylinder of diameter {float(r) * 2:g} mm, height {a.get('height', '?')} mm." if r else "Add a cylinder.")
-    elif op == "Sphere":
-        r = a.get("radius")
-        s.append(f"Add a sphere of diameter {float(r) * 2:g} mm." if r else "Add a sphere.")
-    else:
-        s.append(f"{verb}.")
-    if mode == "subtract" and op not in ("extrude",) and not op.endswith("Hole"):
-        s[0] = s[0].rstrip(".") + ". Remove this material."
-    elif mode == "intersect":
-        s[0] = s[0].rstrip(".") + ". Keep only the overlap."
-    if abs(dv) > 1e-6:
-        s.append(f"Volume {'increases' if dv > 0 else 'decreases'} by {abs(dv):,.0f} mm³.")
-    s.append(f"The part has {faces} faces.")
-    return " ".join(s)
+            return f"Cut the sketch {amount} mm into the part." if amount else "Cut the sketch into the part."
+        return f"Extrude the sketch {amount} mm." if amount else "Extrude the sketch."
+    if operation == "revolve":
+        return f"Revolve the sketch {arguments.get('revolution_arc', '360')}°."
+    if operation in ("fillet", "chamfer"):
+        size = arguments.get("radius") or arguments.get("length")
+        size_clause = f" with {'radius' if operation == 'fillet' else 'size'} {size} mm." if size else "."
+        return f"{verb} {_count_phrase_for_edges(arguments.get('count'))}" + size_clause
+    if operation == "offset":
+        return f"Shell the part. Wall thickness is {arguments.get('amount', '?').lstrip('-')} mm."
+    if operation in HOLE_OPERATIONS:
+        diameter = _diameter_text(arguments.get("radius"))
+        depth_clause = f", {arguments['depth']} mm deep." if arguments.get("depth") else ", through the part."
+        return verb + (f" of diameter {diameter} mm" if diameter else "") + depth_clause
+    if operation == "Box":
+        return (f"Add a box {arguments.get('length', '?')} × {arguments.get('width', '?')} × "
+                f"{arguments.get('height', '?')} mm.")
+    if operation == "Cylinder":
+        diameter = _diameter_text(arguments.get("radius"))
+        return (f"Add a cylinder of diameter {diameter} mm, height {arguments.get('height', '?')} mm."
+                if diameter else "Add a cylinder.")
+    if operation == "Sphere":
+        diameter = _diameter_text(arguments.get("radius"))
+        return f"Add a sphere of diameter {diameter} mm." if diameter else "Add a sphere."
+    return f"{verb}."
 
 
-def finalize(recorder: StepRecorder):
-    """-> list of (meta, shape). Keeps every recorded BuildPart step, in order."""
-    out = []
-    prev_vol = {}
-    for st in recorder.steps:
-        shp = st["shape"]
-        try:
-            vol = float(shp.volume)
-            faces = len(shp.faces())
-        except Exception:
-            vol, faces = 0.0, 0
-        pv = prev_vol.get(st["builder"])
-        if pv is not None and abs(vol - pv[0]) < 1e-6 and faces == pv[1]:
+def _with_mode_consequence(sentence: str, operation: str, mode: str) -> str:
+    if mode == "subtract" and operation != "extrude" and not operation.endswith("Hole"):
+        return sentence.rstrip(".") + ". Remove this material."
+    if mode == "intersect":
+        return sentence.rstrip(".") + ". Keep only the overlap."
+    return sentence
+
+
+def describe_step_in_plain_english(step: dict, previous_volume: float | None, volume: float, face_count: int) -> str:
+    operation, mode, arguments = step["op"], step["mode"], step["args"]
+    volume_change = volume - (previous_volume or 0.0)
+    verb = OPERATION_VERBS.get(operation, operation.replace("_", " ").capitalize())
+    sentences = [_with_mode_consequence(_first_sentence_for_operation(operation, mode, arguments, verb), operation, mode)]
+    if abs(volume_change) > 1e-6:
+        sentences.append(f"Volume {'increases' if volume_change > 0 else 'decreases'} by {abs(volume_change):,.0f} mm³.")
+    sentences.append(f"The part has {face_count} faces.")
+    return " ".join(sentences)
+
+
+def _volume_and_face_count(shape) -> tuple[float, int]:
+    try:
+        return float(shape.volume), len(shape.faces())
+    except Exception:
+        return 0.0, 0
+
+
+def _step_metadata(step_index: int, step: dict, previous: tuple | None, volume: float, face_count: int) -> dict:
+    operation = step["op"]
+    icon = OPERATION_ICONS.get(operation, operation if operation in OPERATION_ICONS.values() else "operation")
+    return {
+        "index": step_index, "op": operation, "label": OPERATION_LABELS.get(operation, operation.replace("_", " ")),
+        "icon": icon, "mode": step["mode"], "line": step["line"], "args": step["args"],
+        "volume": round(volume, 3), "faces": face_count, "builder": step["builder"],
+        "description": describe_step_in_plain_english(step, previous[0] if previous else None, volume, face_count),
+    }
+
+
+def finalize_recorded_steps(recorder: StepRecorder) -> list[tuple[dict, object]]:
+    finalized_steps = []
+    previous_volume_and_faces_by_builder = {}
+    for step in recorder.steps:
+        volume, face_count = _volume_and_face_count(step["shape"])
+        previous = previous_volume_and_faces_by_builder.get(step["builder"])
+        if previous is not None and abs(volume - previous[0]) < 1e-6 and face_count == previous[1]:
             continue
-        meta = {
-            "index": len(out), "op": st["op"], "label": LABELS.get(st["op"], st["op"].replace("_", " ")), "icon": ICON.get(st["op"], st["op"] if st["op"] in ICON.values() else "operation"),
-            "mode": st["mode"], "line": st["line"], "args": st["args"],
-            "volume": round(vol, 3), "faces": faces, "builder": st["builder"],
-            "description": describe(st, pv[0] if pv else None, vol, faces),
-        }
-        prev_vol[st["builder"]] = (vol, faces)
-        out.append((meta, shp))
-    # builder ids -> small ints for the client
-    ids = {}
-    for m, _ in out:
-        m["builder"] = ids.setdefault(m["builder"], len(ids))
-    return out
+        finalized_steps.append((_step_metadata(len(finalized_steps), step, previous, volume, face_count), step["shape"]))
+        previous_volume_and_faces_by_builder[step["builder"]] = (volume, face_count)
+    small_builder_numbers = {}
+    for step_metadata, _shape in finalized_steps:
+        step_metadata["builder"] = small_builder_numbers.setdefault(step_metadata["builder"], len(small_builder_numbers))
+    return finalized_steps

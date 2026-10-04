@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>BISCAD Studio</title>
   <meta name="description" content="BISCAD Studio — write build123d, get a precise B-rep model, point at geometry with stable ids.">
-  <meta name="theme-color" content="#ffffff">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%231a1a1a'/%3E%3Cpath d='M8 9l8 15 8-15' fill='none' stroke='%23fff' stroke-width='2.4'/%3E%3C/svg%3E">
+  <meta name="theme-color" content="#120c0d">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Michroma&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Big+Shoulders+Display:wght@800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="vendor/codemirror/codemirror.css">
   <link rel="stylesheet" href="css/viewer.css">
   <link rel="stylesheet" href="css/studio.css">
@@ -26,21 +26,25 @@
   } }
   </script>
 </head>
-<body class="tab-model">
+<body class="tab-model ws-script">
   <header class="top">
-    <a class="mark" href="index.html"><b>BISCAD</b><small>CLOUD</small></a>
-    <span class="top-sep"></span>
+    <a class="mark" href="index.html" title="BISCAD home"><img src="favicon.svg" alt=""><b>BISCAD</b></a>
+    <nav class="workspaces" id="workspaces" aria-label="Workspace">
+      <button data-ws="script" class="on" title="Code, viewport and properties">Script</button>
+      <button data-ws="model" title="Viewport and properties">Model</button>
+      <button data-ws="analyze" title="Measure and inspect">Analyze</button>
+    </nav>
     <div class="doc">
       <input id="docName" value="Untitled part" spellcheck="false" aria-label="Document name">
       <span class="ver" id="verBadge">unsaved</span>
     </div>
     <div class="top-fill"></div>
-    <button class="status" id="status" title="API status"><i></i><span>Connecting</span></button>
+    <button class="status" id="status" title="Build status · click for API settings"><i></i><span>Connecting</span></button>
     <div class="top-actions">
-      <button class="vc-btn hide-s" id="agentBtn" title="What an AI agent sees (server render with face labels)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="18" height="14"/><circle cx="9" cy="12" r="1.2" fill="currentColor"/><circle cx="15" cy="12" r="1.2" fill="currentColor"/><path d="M12 2v3"/></svg><span>Agent view</span></button>
+      <button class="vc-btn hide-s" id="agentBtn" title="What an AI agent sees: a kernel render with face labels">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="12" r="1.2" fill="currentColor"/><circle cx="15" cy="12" r="1.2" fill="currentColor"/><path d="M12 2v3"/></svg><span>Agent view</span></button>
       <div class="menuw">
-        <button class="vc-btn" id="exportBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span class="hide-s">Export</span></button>
+        <button class="vc-btn" id="exportBtn" title="Export and reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span class="hide-s">Export</span></button>
         <div class="menu" id="exportMenu">
           <div class="menu-h">Download</div>
           <button data-fmt="step"><span>STEP</span><small>AP214 · B-rep</small></button>
@@ -59,18 +63,18 @@
         </div>
       </div>
       <div class="menuw">
-        <button class="vc-btn" id="shareBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.8l7.6-3.6M8.2 13.2l7.6 3.6"/></svg><span class="hide-s">Share</span></button>
+        <button class="vc-btn" id="shareBtn" title="Share link and embed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.8l7.6-3.6M8.2 13.2l7.6 3.6"/></svg><span class="hide-s">Share</span></button>
         <div class="menu menu-share" id="shareMenu">
           <div class="menu-h">Share link</div>
           <div class="copyrow"><input id="shareLink" readonly><button class="vc-btn" data-copy="shareLink">Copy</button></div>
           <div class="menu-h">Embed</div>
           <div class="copyrow"><input id="embedCode" readonly><button class="vc-btn" data-copy="embedCode">Copy</button></div>
-          <a class="vc-btn" id="openViewer" target="_blank" style="margin-top:10px;width:100%">Open viewer ↗</a>
+          <a class="vc-btn wide" id="openViewer" target="_blank">Open viewer ↗</a>
         </div>
       </div>
-      <button class="vc-btn vc-btn-dark" id="saveBtn" title="Save version (Ctrl/⌘ S)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/></svg><span class="hide-s">Save</span></button>
+      <button class="vc-btn vc-btn-dark" id="saveBtn" title="Save version · Ctrl/⌘ S"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/></svg><span class="hide-s">Save</span></button>
       <div class="menuw">
-        <button class="vc-btn icon-only" id="settingsBtn" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></button>
+        <button class="vc-btn icon-only" id="settingsBtn" title="API settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></button>
         <div class="menu menu-settings" id="settingsMenu">
           <div class="menu-h">API</div>
           <label class="field"><span>Base URL</span><input id="apiBase" placeholder="same origin" spellcheck="false"></label>
@@ -78,20 +82,26 @@
           <label class="field"><span>Mesh quality</span>
             <select id="quality"><option value="draft">Draft — fastest</option><option value="normal" selected>Normal</option><option value="fine">Fine</option></select></label>
           <div class="field-note" id="meNote">Anonymous use works with a playground quota.</div>
-          <button class="vc-btn vc-btn-dark" id="settingsSave" style="width:100%">Apply</button>
+          <button class="vc-btn vc-btn-dark wide" id="settingsSave">Apply</button>
         </div>
       </div>
     </div>
   </header>
 
   <main class="layout" id="layout">
-    <section class="left" id="left">
+    <section class="area left" id="left">
+      <div class="area-head">
+        <svg class="area-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></svg>
+        <div class="selectw"><select id="examples" aria-label="Examples"></select></div>
+        <div class="area-fill"></div>
+        <button class="vc-btn vc-btn-dark build" id="buildBtn" title="Build · Ctrl/⌘ Enter"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></svg><span>Build</span><kbd>⌘↵</kbd></button>
+      </div>
       <div class="ask" id="ask">
         <div class="ask-box">
           <svg class="ask-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>
           <textarea id="askInput" rows="1" placeholder="Describe a part…" spellcheck="false"></textarea>
           <kbd class="ask-k">⌘K</kbd>
-          <button class="ask-go" id="askGo" title="Ask (Enter)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          <button class="ask-go" id="askGo" title="Ask · Enter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
         </div>
         <div class="ask-opts">
           <div class="seg2" id="askMode"><button data-v="modify" class="on">Modify current</button><button data-v="new">New part</button></div>
@@ -99,51 +109,71 @@
         </div>
         <div class="rounds" id="rounds" hidden></div>
       </div>
-      <div class="edhead">
-        <div class="selectw">
-          <select id="examples" aria-label="Examples"></select>
-        </div>
-        <div class="edhead-fill"></div>
-        <button class="vc-btn vc-btn-dark build" id="buildBtn" title="Build (Ctrl/⌘ Enter)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 4.5v15l12-7.5z" fill="currentColor" stroke="none"/></svg><span>Build</span><kbd>⌘↵</kbd></button>
-      </div>
       <div class="editor" id="editor"></div>
       <div class="errbar" id="errbar" hidden></div>
       <div class="logs" id="logs">
-        <button class="logs-h" id="logsToggle"><span>Logs</span><span class="logs-sum" id="logsSum">ready</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 15l6-6 6 6"/></svg></button>
+        <button class="logs-h" id="logsToggle"><span>Log</span><span class="logs-sum" id="logsSum">ready</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 15l6-6 6 6"/></svg></button>
         <pre id="logsBody"></pre>
       </div>
     </section>
     <div class="resizer" id="resizer" title="Drag to resize"></div>
-    <section class="center" id="center">
-      <div id="viewer"></div>
-      <div class="progress" id="progress"></div>
-      <div class="notice" id="notice" hidden></div>
-      <div id="steps"></div>
-      <div id="tb"></div>
+    <section class="area center" id="center">
+      <div class="area-head vp-head">
+        <div id="viewbar"></div>
+        <div class="area-fill"></div>
+        <div id="shadebar"></div>
+      </div>
+      <div class="vp" id="vp">
+        <div id="viewer"></div>
+        <div id="tb"></div>
+        <div class="vp-info" id="vpInfo"><b id="vpProjection">User Perspective</b><span id="vpContext"></span></div>
+        <div class="progress" id="progress"></div>
+        <div class="notice" id="notice" hidden></div>
+      </div>
+      <div class="timeline">
+        <div id="steps"></div>
+        <div class="timeline-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h18M7 8v8M12 6v12M17 9v6"/></svg>Build steps appear here after a build. Scrub them to replay how the model was made.</div>
+      </div>
     </section>
-    <aside class="right" id="right">
-      <section class="sec" id="secParams">
-        <button class="sec-h"><span>Parameters</span><small id="paramCount"></small></button>
-        <div class="sec-b" id="params"></div>
-      </section>
-      <section class="sec" id="secSel">
-        <button class="sec-h"><span>Selection</span><small id="selCount"></small></button>
-        <div class="sec-b" id="sel"></div>
-      </section>
-      <section class="sec" id="secModel">
-        <button class="sec-h"><span>Model</span><small id="buildTime"></small></button>
-        <div class="sec-b" id="summary"></div>
-      </section>
-      <section class="sec" id="secParts">
-        <button class="sec-h"><span>Parts</span><small id="partCount"></small></button>
-        <div class="sec-b flush" id="tree"></div>
-      </section>
-      <section class="sec" id="secHistory">
-        <button class="sec-h"><span>History</span><small id="verCount"></small></button>
-        <div class="sec-b flush" id="history"><div class="vc-empty">Save to start a version history.</div></div>
-      </section>
+    <aside class="area right" id="right">
+      <div class="area-head"><svg class="area-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="1.8" fill="currentColor"/><circle cx="15" cy="12" r="1.8" fill="currentColor"/><circle cx="8" cy="18" r="1.8" fill="currentColor"/></svg><span class="area-title">Properties</span></div>
+      <div class="props">
+        <section class="sec" id="secParams">
+          <button class="sec-h"><span>Parameters</span><small id="paramCount"></small></button>
+          <div class="sec-b" id="params"></div>
+        </section>
+        <section class="sec" id="secModel">
+          <button class="sec-h"><span>Model</span><small id="buildTime"></small></button>
+          <div class="sec-b" id="summary"></div>
+        </section>
+        <section class="sec" id="secSel">
+          <button class="sec-h"><span>Selection</span><small id="selCount"></small></button>
+          <div class="sec-b" id="sel"></div>
+        </section>
+        <section class="sec" id="secParts">
+          <button class="sec-h"><span>Parts</span><small id="partCount"></small></button>
+          <div class="sec-b flush" id="tree"></div>
+        </section>
+        <section class="sec" id="secHistory">
+          <button class="sec-h"><span>History</span><small id="verCount"></small></button>
+          <div class="sec-b flush" id="history"><div class="vc-empty">Save to start a version history.</div></div>
+        </section>
+      </div>
     </aside>
   </main>
+
+  <footer class="statusbar" id="statusbar">
+    <span class="hint"><kbd>LMB</kbd>Select · drag to orbit</span>
+    <span class="hint"><kbd>RMB</kbd>Pan</span>
+    <span class="hint"><kbd>Wheel</kbd>Zoom</span>
+    <span class="hint"><kbd>←</kbd><kbd>→</kbd>Steps</span>
+    <span class="hint"><kbd>?</kbd>Shortcuts</span>
+    <span class="statusbar-fill"></span>
+    <span id="statusSel"></span>
+    <span id="statusMesh"></span>
+    <span id="statusBuild"></span>
+    <span class="api-state" id="statusApi">API —</span>
+  </footer>
 
   <nav class="mtabs" id="mtabs">
     <button data-tab="code">Code</button>
@@ -155,13 +185,13 @@
     <div class="modal-card">
       <div class="modal-h">
         <div><span class="modal-k">Agent view</span><h2>What the model looks like to an AI</h2></div>
-        <button class="vc-x" data-close>×</button>
+        <button class="vc-x" data-close aria-label="Close">×</button>
       </div>
-      <div class="modal-views" id="agentViews">
+      <div class="vc-seg modal-views" id="agentViews">
         <button data-v="iso" class="on">Iso</button><button data-v="front">Front</button><button data-v="top">Top</button><button data-v="right">Right</button><button data-v="grid">4-up</button>
       </div>
       <div class="agent-img"><img id="agentImg" alt="Server render with face labels"><div class="agent-load" id="agentLoad"></div></div>
-      <p class="modal-note">Rendered by the kernel at <code id="agentUrl"></code>. Labels are the same stable ids the viewer shows — an agent says <code>p0/f3</code>, you see exactly which face. Your current selection is highlighted.</p>
+      <p class="modal-note">The kernel renders this at <code id="agentUrl"></code>. The labels are the same stable ids that the viewer shows. When an agent says <code>p0/f3</code>, you see the same face. Your selection is highlighted.</p>
     </div>
   </div>
 

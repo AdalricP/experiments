@@ -17,6 +17,7 @@
   --signal_ok: #4fae7c;
   --signal_warn: #e0a33a;
   --stripe_white: #f6f1ec;
+  --display_serif: "DM Serif Display", "Bodoni Moda", Georgia, serif;
   --display: "Big Shoulders Display", "Oswald", "Arial Narrow", sans-serif;
   --body: "IBM Plex Sans", "Inter Tight", system-ui, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
