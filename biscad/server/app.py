@@ -172,9 +172,10 @@ def get_scene(request: Request, version_id: version_id_in_path):
 
 
 @app.get("/v1/versions/{vid}/topology")
-def get_topology(request: Request, version_id: version_id_in_path, type: str | None = None, limit: int | None = None):
+def get_topology(request: Request, version_id: version_id_in_path,
+                 entity_type: str | None = Query(None, alias="type"), limit: int | None = None):
     admit_caller(request)
-    return core.filtered_topology(version_id, type, limit)
+    return core.filtered_topology(version_id, entity_type, limit)
 
 
 @app.get("/v1/versions/{vid}/steps")
@@ -205,11 +206,13 @@ def _comma_separated_ids(text: str) -> list[str]:
 
 
 @app.get("/v1/versions/{vid}/render.png")
-def render_png(request: Request, version_id: version_id_in_path, view: str = "iso", w: int = Query(800, le=2000, ge=64),
-               h: int = Query(600, le=2000, ge=64), highlight: str = "", labels: bool = False,
+def render_png(request: Request, version_id: version_id_in_path, view: str = "iso",
+               width_in_pixels: int = Query(800, alias="w", le=2000, ge=64),
+               height_in_pixels: int = Query(600, alias="h", le=2000, ge=64), highlight: str = "", labels: bool = False,
                edges: bool = True, hide: str = ""):
     admit_caller_to_successful_version(request, version_id)
-    png_bytes = render.render_version_png(store.directory_for_version(version_id), _parse_view_argument(view), w, h,
+    png_bytes = render.render_version_png(store.directory_for_version(version_id), _parse_view_argument(view),
+                                          width_in_pixels, height_in_pixels,
                                           highlight=_comma_separated_ids(highlight), labels=labels, edges=edges,
                                           hidden=_comma_separated_ids(hide))
     return Response(png_bytes, media_type="image/png")
@@ -288,10 +291,10 @@ def bom(request: Request, version_id: version_id_in_path, density: float | None 
 
 
 @app.get("/v1/diff")
-def diff(request: Request, a: str, b: str):
+def diff(request: Request, first_version_id: str = Query(alias="a"), second_version_id: str = Query(alias="b")):
     admit_caller(request)
-    return core.run_in_isolated_kernel(analysis.diff_versions, core.successful_version_directory(a),
-                                       core.successful_version_directory(b))
+    return core.run_in_isolated_kernel(analysis.diff_versions, core.successful_version_directory(first_version_id),
+                                       core.successful_version_directory(second_version_id))
 
 
 def _cached_version_file(version_directory: str, file_name: str, produce_content, write_mode: str) -> str:

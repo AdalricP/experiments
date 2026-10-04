@@ -1,5 +1,3 @@
-"""Example build123d programs. Shown in the studio and served at /v1/examples."""
-
 BRACKET = '''\
 from build123d import *
 

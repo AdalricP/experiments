@@ -46,12 +46,17 @@ def _compound_of_shapes(shapes: list, label: str | None = None):
     return bd.Compound(label=label, children=shapes) if label else bd.Compound(children=shapes)
 
 
+def _try_apply_color(shape, color: str | None):
+    if not color:
+        return
+    with contextlib.suppress(Exception):
+        shape.color = bd.Color(color)
+
+
 def _labelled_colored_compound(parts: list):
     for name, shape, color in parts:
         shape.label = name
-        if color:
-            with contextlib.suppress(Exception):
-                shape.color = bd.Color(color)
+        _try_apply_color(shape, color)
     return _compound_of_shapes([shape for _name, shape, _color in parts], label="model")
 
 
