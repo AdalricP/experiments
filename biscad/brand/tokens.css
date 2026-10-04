@@ -1,0 +1,23 @@
+/* αριανός — BISCAD design tokens. Blood red on warm near-black; bone text; brass for measurement. */
+:root {
+  --void: #0a0506;
+  --char: #120c0d;
+  --panel: #1a1213;
+  --panel_raised: #231819;
+  --line: rgba(255, 214, 214, 0.08);
+  --line_strong: rgba(255, 214, 214, 0.16);
+  --bone: #efe6e1;
+  --ash: #a3938f;
+  --smoke: #6e605d;
+  --oxblood: #4a0710;
+  --blood: #8a0b1a;
+  --blood_bright: #c1162b;
+  --ember: #ff4a3d;
+  --brass: #c9a36a;
+  --signal_ok: #4fae7c;
+  --signal_warn: #e0a33a;
+  --stripe_white: #f6f1ec;
+  --display: "Big Shoulders Display", "Oswald", "Arial Narrow", sans-serif;
+  --body: "IBM Plex Sans", "Inter Tight", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
