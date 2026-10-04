@@ -30,5 +30,6 @@ Earlier phase (backend, MCP, viewer, studio, tests) is done; see git history.
 - [x] handbook PDF: docs/BISCAD-handbook.pdf (36 pages); Google Doc skipped (offer to user)
 - [x] JS style/LOC pass (-208 LOC, flow test clean); kernel perf (renders 1.5-2.7x faster, outputs identical)
 - [x] final integration check (41 tests, studio flow vs live server, no errors), preview artifact https://claude.ai/artifact/PxrByvS6GQ6Z8tCTfvd4pu, pinged user
-- [ ] next: persistent face naming via OCCT history (handbook §4), sketch + constraint solver, assembly mates, shell scripts/CSS to .construction style
+- [x] persistent face ids p0/#hash (46 tests)
+- [ ] next: DFM issue refs as persistent ids; sketch + constraint solver, assembly mates, shell scripts/CSS to .construction style
 Project size: ~11.1k lines (excl. vendor).
