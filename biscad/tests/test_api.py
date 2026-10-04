@@ -289,3 +289,12 @@ def test_persistent_references_resolve_in_measure_and_render(api_client):
                                         + top_face["persistent_id"].replace("#", "%23"), headers=ADMIN_HEADERS)
     plain_render = api_client.get(f"/v1/versions/{version['id']}/render.png?view=top", headers=ADMIN_HEADERS)
     assert highlighted_render.status_code == 200 and highlighted_render.content != plain_render.content
+
+
+def test_check_issues_carry_persistent_face_references(api_client):
+    version = api_client.post("/v1/build", json={"script": examples.ENCLOSURE, "include_scene": False},
+                              headers=ADMIN_HEADERS).json()
+    report = api_client.post(f"/v1/versions/{version['id']}/check", json={"process": "fdm"}).json()
+    overhangs = [issue for issue in report["issues"] if issue["code"] == "overhangs"]
+    assert overhangs and len(overhangs[0]["persistent_refs"]) == len(overhangs[0]["refs"])
+    assert all("/#" in reference for reference in overhangs[0]["persistent_refs"])

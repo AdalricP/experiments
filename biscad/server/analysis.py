@@ -429,8 +429,24 @@ def check_manufacturability(version_directory: str, process: str = "fdm") -> dic
         issues += part_issues
         if part_metrics:
             metrics_by_part[f"p{part_index}"] = part_metrics
+    _attach_persistent_face_references(version_directory, issues)
     return {"process": process, "ok": not any(issue["severity"] == "error" for issue in issues),
             "issues": issues, "metrics": metrics_by_part}
+
+
+def _persistent_id_by_face_index_id(version_directory: str) -> dict:
+    with open(os.path.join(version_directory, "topology.json")) as topology_file:
+        topology = json.load(topology_file)
+    return {face["id"]: face["persistent_id"] for part in topology["parts"] for face in part["faces"]
+            if face.get("persistent_id")}
+
+
+def _attach_persistent_face_references(version_directory: str, issues: list) -> None:
+    persistent_id_by_face = _persistent_id_by_face_index_id(version_directory)
+    for issue in issues:
+        face_references = [reference for reference in issue.get("refs", []) if reference in persistent_id_by_face]
+        if face_references:
+            issue["persistent_refs"] = [persistent_id_by_face[reference] for reference in face_references]
 
 
 def _first_hit_beyond(intersector, minimum_distance: float) -> float | None:
