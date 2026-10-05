@@ -53,15 +53,17 @@ python client/biscad.py watch part.py --step part.step   # rebuild on save; open
 | | |
 |---|---|
 | **Kernel** | build123d 0.13 on OpenCascade, every job in a forked, rlimited worker (~0.2 s for simple parts) |
-| **Stable references** | every face/edge/vertex is `p0/f3`, `p0/e7`, … — same ids in the viewer, REST and MCP |
+| **Stable references** | every face/edge/vertex is `p0/f3`, `p0/e7`, … — same ids in the viewer, REST and MCP; faces also get a persistent id `p0/#e28eef21` from build lineage that survives inserted features |
 | **Agents can see** | `render.png` (any view, id labels, highlights), 4-view `render-grid.png`, MCP tools return images |
 | **Oversight** | build-step replay with plain-English (STE-style) descriptions, HTML design report, explainer GIF |
 | **Parametric** | top-level `params = {...}` in a script → overridable per build → configurations |
+| **Sketches** | `import constraint_sketch`: points, lines, circles + 14 constraints, least-squares solve, DOF report, conflict naming |
+| **Assemblies** | build123d joints (rigid, revolute, linear, ball) as mates; interference (clash) check; BOM |
 | **Versioned** | documents → versions with parents (branch from anywhere), geometric diff between any two |
-| **Analysis** | measure (distance/angle/parallel), section (area + hatched SVG), mass/CoM/inertia, DFM (fdm/cnc/sheet) |
+| **Analysis** | measure (distance/angle/parallel), section (area + hatched SVG), mass/CoM/inertia, DFM (fdm/cnc/sheet), version diff |
 | **Exchange** | export STEP, STL, GLB, 3MF, BREP, OBJ, SVG/DXF 3-view drawings; import STEP/BREP/STL |
 | **Text-to-CAD** | `POST /v1/agent`: Claude writes → kernel builds → Claude checks renders → fixes (optional) |
-| **Web** | landing, studio (editor + params + viewer + tools), embeddable viewer, docs |
+| **Web** | dark landing, Blender-style studio (editor, params, viewer, steps timeline, agent view), embeddable viewer, docs, campaign + launch console |
 | **Accounts** | API keys, plans, monthly quotas, rate limits, usage metering (SQLite) |
 
 ## Layout
