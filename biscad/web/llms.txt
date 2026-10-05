@@ -17,6 +17,7 @@ Auth: `Authorization: Bearer bsc_...` (optional; without it you get a small anon
 
 ## Script rules
 
+- Use f-strings, not str.format (format strings are blocked).
 - No file/OS/network access (export_*, import_*, open, np.save/load are rejected; the server exports for you).
 - Allowed imports: build123d, numpy, math, cmath, random, itertools, functools, operator, typing, dataclasses, enum, copy, collections, statistics, fractions, decimal, string, re, constraint_sketch.
 - Not allowed: file or network access, open, exec, eval, compile, getattr/setattr/delattr, globals/locals/vars, dunder attributes or dunder strings, relative imports.

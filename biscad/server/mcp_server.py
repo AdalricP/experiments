@@ -25,7 +25,7 @@ Script rules:
   callers can override them per build (configurations). Units are millimetres, Z is up.
 - Assemblies: give children `.label` and `.color = Color(r, g, b)` and return
   `Compound(children=[...])`.
-- No file, network or OS access. Builds time out (30-180 s by plan).
+- No file, network or OS access. Use f-strings, not str.format. Builds time out (30-180 s by plan).
 
 References: faces/edges/vertices are named `p<part>/f<n>`, `p<part>/e<n>`, `p<part>/v<n>`; n is the
 index in build123d's `part.faces()` / `part.edges()` order, so `p0/f3` is `result.faces()[3]` for a

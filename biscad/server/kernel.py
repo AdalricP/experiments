@@ -38,6 +38,7 @@ BANNED_ATTRIBUTE_NAMES = {
     "distutils", "modules", "mro", "subclasses", "globals", "locals", "vars", "frame", "persistence",
     "available_fonts", "FontManager", "Path", "PathLike", "Mesher", "ExportSVG", "ExportDXF", "Export2D",
     "brep_from_stl", "exporters", "exporters3d", "importers", "mesher", "ezdxf", "Lib3MF", "svgpathtools",
+    "format", "format_map", "vformat", "get_field", "Formatter", "environ", "getenv",
 }
 BANNED_MODULE_MEMBER_NAMES = BANNED_ATTRIBUTE_NAMES | {"export_to_pcbway", "import_svg_as_buildline_code"}
 BANNED_NAMES = {

@@ -733,6 +733,11 @@ Before anything runs, `parse_and_check_script` walks the AST and rejects:
   frame attributes (`gi_`, `cr_`, `tb_`, `f_`, `co_`) by prefix.
 - **Banned builtins by name** as `Name` nodes: `open`, `exec`, `eval`, `compile`,
   `__import__`, `getattr`, `setattr`, `input`, `breakpoint`, `exit`.
+- **Format-string traversal.** `str.format` walks attributes and keys inside the format string
+  (`'{0.gi_frame.f_globals[os].environ}'`), which the AST never sees. A review on 5 Oct found this
+  could print server environment variables from a library generator's frame, so `format`,
+  `format_map`, `vformat`, `get_field`, `Formatter`, `environ` and `getenv` are banned names.
+  f-strings stay allowed: their expressions are real AST nodes and pass the same checks.
 - **Strings containing `__`.** This blocks `"{0.__class__}".format(x)` and
   `getattr`-by-string tricks, because the dangerous name never appears as a literal.
 
