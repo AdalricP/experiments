@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# Run BISCAD on this machine and expose it publicly with a free Cloudflare quick tunnel
-# (no account needed). Prints a https://<random>.trycloudflare.com URL anyone can use.
-#
-#   ./deploy/public.sh            # uses Docker if available, else a local Python venv
-#   BISCAD_ADMIN_KEY=bsc_secret ./deploy/public.sh   # also creates an unlimited key for you
 set -euo pipefail
 cd "$(dirname "$0")/.."
 PORT="${PORT:-8000}"

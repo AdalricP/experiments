@@ -34,5 +34,6 @@ Earlier phase (backend, MCP, viewer, studio, tests) is done; see git history.
 - [x] DFM issues carry persistent_refs (47 tests)
 - [x] constraint sketches (server/constraint_sketch.py, 60 tests)
 - [x] assembly mates via build123d joints: turntable example, guide text, test (62 tests)
-- [ ] next: shell scripts/CSS to .construction style
+- [x] shell scripts, Dockerfile, CSS: comments removed (.construction)
+- [ ] ongoing polish: UX passes, more examples, perf; see handbook §17 roadmap
 Project size: ~11.1k lines (excl. vendor).

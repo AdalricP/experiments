@@ -1,4 +1,3 @@
-/* BISCAD — viewer chrome shared by studio.html and view.html. Tokens copied from brand/tokens.css. */
 
 :root {
   --void: #0a0506;
@@ -72,7 +71,6 @@
 .vc-help-grid { display: grid; grid-template-columns: max-content 1fr; gap: 7px 16px; align-items: center; font-size: 12px; color: var(--bone); }
 kbd { display: inline-block; min-width: 20px; padding: 2px 5px; border: 1px solid var(--line_strong); border-bottom-width: 2px; border-radius: 3px; font: 500 10.5px/1.2 var(--mono); text-align: center; color: var(--ash); background: var(--char); }
 
-/* toolbar */
 .vc-toolbar {
   display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 6px;
   background: var(--glass); border: 1px solid var(--line); box-shadow: var(--shadow); backdrop-filter: blur(12px); font-family: var(--body);
@@ -150,7 +148,6 @@ input[type=range]::-moz-range-thumb { width: 11px; height: 11px; border-radius: 
 input[type=range]:focus { outline: none; }
 input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rgba(255, 74, 61, 0.35); }
 
-/* part outliner */
 .vc-tree { font-family: var(--body); }
 .vc-tree-row { display: grid; grid-template-columns: 10px 1fr auto 22px 22px; align-items: center; gap: 7px; height: 24px; padding: 0 4px 0 10px; cursor: pointer; color: var(--bone); }
 .vc-tree-row:nth-child(even) { background: rgba(255, 214, 214, 0.022); }
@@ -165,7 +162,6 @@ input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rg
 .vc-ib svg { width: 14px; height: 14px; }
 .vc-empty { padding: 10px 12px; font-size: 12px; color: var(--smoke); }
 
-/* selection inspector */
 .vc-sel { font-family: var(--body); font-size: 12px; }
 .vc-sel-empty { color: var(--ash); line-height: 1.5; }
 .vc-sel-empty span, .vc-sel-empty code { font: 500 10.5px/1 var(--mono); padding: 1px 4px; border-radius: 3px; background: var(--char); color: var(--bone); }
@@ -197,7 +193,6 @@ input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rg
 .vc-badge { position: absolute; right: 10px; bottom: 10px; display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 4px; background: rgba(18, 12, 13, 0.7); border: 1px solid var(--line); text-decoration: none; color: var(--bone); backdrop-filter: blur(8px); font: 800 12px/1 var(--display); letter-spacing: 0.16em; z-index: 5; }
 .vc-badge small { font: 500 9px/1 var(--body); letter-spacing: 0.18em; color: var(--ember); }
 
-/* steps timeline */
 .vc-steps { font-family: var(--body); background: var(--panel); }
 .vc-steps[hidden] { display: none !important; }
 .vc-steps-head { display: flex; align-items: center; gap: 2px; height: 28px; padding: 0 8px; min-width: 0; background: var(--panel_raised); border-bottom: 1px solid var(--void); }

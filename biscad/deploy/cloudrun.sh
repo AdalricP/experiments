@@ -1,10 +1,4 @@
 #!/usr/bin/env bash
-# Deploy BISCAD to Google Cloud Run: autoscaling from 0 to a hard cap, billed per request-second.
-#   ./deploy/cloudrun.sh [project-id] [region]
-# Needs: gcloud CLI (brew install --cask google-cloud-sdk) and a project with billing enabled.
-# Cost guard rails: scales to zero when idle, max BISCAD_MAX_INSTANCES (default 2) instances, a
-# per-key/IP rate limit inside the app, and a $5 budget alert if a billing account is found.
-# Light use stays inside Cloud Run's monthly free tier; a sustained flood at the cap is what costs.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 REGION="${2:-us-central1}"

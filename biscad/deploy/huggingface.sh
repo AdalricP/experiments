@@ -1,8 +1,4 @@
 #!/usr/bin/env bash
-# Deploy to a free Hugging Face Space (Docker, 2 vCPU / 16 GB, no card needed).
-#   1. Create a token with write access: https://huggingface.co/settings/tokens
-#   2. HF_TOKEN=hf_xxx ./deploy/huggingface.sh <your-hf-username> [space-name]
-# Result: https://<user>-<space>.hf.space  (Studio at /studio.html, MCP at /mcp)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 USER_NAME="${1:?usage: HF_TOKEN=... ./deploy/huggingface.sh <hf-username> [space-name]}"
