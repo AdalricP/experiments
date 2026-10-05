@@ -85,5 +85,7 @@ export const bundled_sample_models = [
   { id: 'gear', name: 'Spur gear' },
   { id: 'enclosure', name: 'Electronics enclosure' },
   { id: 'leg', name: 'Quadruped leg (assembly)' },
+  { id: 'constrained_plate', name: 'Constraint-sketched plate' },
+  { id: 'turntable', name: 'Turntable (assembly with joints)' },
 ];
 export const resolve_sample_scene_url = (sample_id) => new URL(`../samples/${sample_id}.json`, import.meta.url).href;
