@@ -105,3 +105,6 @@ Setup:
 
 - [Docs](docs.html): quickstart, concepts, full reference
 - [Studio](studio.html): browser editor + viewer
+
+## Assemblies and joints
+Place parts with build123d joints (RigidJoint, RevoluteJoint, LinearJoint, CylindricalJoint, BallJoint) and `a.joints["x"].connect_to(b.joints["y"], angle=...)`. Example: `turntable` in GET /v1/examples. Check clashes with GET /v1/versions/{vid}/interference.

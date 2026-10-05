@@ -386,3 +386,15 @@ def test_constrained_plate_example_builds_fully_constrained(api_client):
     assert "degrees of freedom left: 0" in version["logs"]
     failing = build_without_scene(api_client, examples.CONSTRAINED_PLATE, {"foot": 70})
     assert not failing["ok"] and "ConstraintSketchError" in failing["error"]
+
+
+def test_joints_place_assembly_parts(api_client):
+    def arm_bounding_box(arm_angle_in_degrees):
+        version = api_client.post("/v1/build", json={"script": examples.TURNTABLE, "include_scene": False,
+                                                     "params": {"arm_angle": arm_angle_in_degrees}},
+                                  headers=ADMIN_HEADERS).json()
+        assert version["ok"], version.get("error")
+        return {part["name"]: part["bbox"] for part in version["summary"]["parts"]}
+    straight, turned = arm_bounding_box(0), arm_bounding_box(90)
+    assert straight["post"]["min"][2] == 10.0
+    assert straight["arm"]["max"][0] > 80 and turned["arm"]["max"][1] > 80

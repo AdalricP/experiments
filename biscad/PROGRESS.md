@@ -33,5 +33,6 @@ Earlier phase (backend, MCP, viewer, studio, tests) is done; see git history.
 - [x] persistent face ids p0/#hash (46 tests)
 - [x] DFM issues carry persistent_refs (47 tests)
 - [x] constraint sketches (server/constraint_sketch.py, 60 tests)
-- [ ] next: assembly mates, shell scripts/CSS to .construction style
+- [x] assembly mates via build123d joints: turntable example, guide text, test (62 tests)
+- [ ] next: shell scripts/CSS to .construction style
 Project size: ~11.1k lines (excl. vendor).

@@ -48,6 +48,8 @@ build123d cheatsheet:
   result = p.part
 Selectors: .faces()/.edges()/.vertices(), .filter_by(Axis.Z | GeomType.CIRCLE), .sort_by(Axis.Z),
 .group_by(Axis.Z)[-1], .sort_by_distance((x, y, z)). Algebra mode also works: `result = Box(10,10,10) - Cylinder(3, 10)`.
+Joints (mates): RigidJoint("top", base, Location((0,0,10))); RevoluteJoint("pivot", post, axis=Axis(...));
+base.joints["top"].connect_to(post.joints["bottom"]); post.joints["pivot"].connect_to(arm.joints["hub"], angle=35).
 Constraint sketch: `s = ConstraintSketch(); a = s.point(0, 0, fixed=True); b = s.point(40, 3); l = s.line(a, b); s.horizontal(l); s.length(l, 60)`
 (+ vertical parallel perpendicular distance equal angle radius tangent midpoint point_on_line coincident; circle(center, radius=)) -> `sol = s.solve()` (sol.degrees_of_freedom; error names the conflict) -> `extrude(sol.face(), 6)`.
 """

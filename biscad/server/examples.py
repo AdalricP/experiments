@@ -336,6 +336,41 @@ with BuildPart() as plate:
 result = plate.part
 '''
 
+TURNTABLE = '''\
+from build123d import *
+
+params = {"arm_angle": 35, "arm_length": 90}
+
+with BuildPart() as base_builder:
+    Box(60, 60, 10, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    fillet(base_builder.edges().filter_by(Axis.Z), 6)
+base = base_builder.part
+base.label, base.color = "base", Color(0.29, 0.29, 0.29)
+
+with BuildPart() as post_builder:
+    Cylinder(8, 50, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    chamfer(post_builder.edges().group_by(Axis.Z)[-1], 1)
+post = post_builder.part
+post.label, post.color = "post", Color(0.86, 0.85, 0.82)
+
+with BuildPart() as arm_builder:
+    Box(params["arm_length"], 14, 8, align=(Align.MIN, Align.CENTER, Align.CENTER))
+    with Locations((params["arm_length"] - 8, 0, 0)):
+        Hole(3)
+arm = arm_builder.part
+arm.label, arm.color = "arm", Color(0.55, 0.05, 0.1)
+
+RigidJoint("top", base, Location((0, 0, 10)))
+RigidJoint("bottom", post, Location((0, 0, 0)))
+RevoluteJoint("pivot", post, axis=Axis((0, 0, 50), (0, 0, 1)))
+RigidJoint("hub", arm, Location((0, 0, 0)))
+
+base.joints["top"].connect_to(post.joints["bottom"])
+post.joints["pivot"].connect_to(arm.joints["hub"], angle=params["arm_angle"])
+
+result = Compound(label="turntable", children=[base, post, arm])
+'''
+
 EXAMPLES = [
     {"id": "quadruped", "name": "Quadruped robot (23-part assembly)", "script": QUADRUPED},
     {"id": "bracket", "name": "Angle bracket", "script": BRACKET},
@@ -344,4 +379,5 @@ EXAMPLES = [
     {"id": "enclosure", "name": "Electronics enclosure", "script": ENCLOSURE},
     {"id": "leg", "name": "Quadruped leg (assembly)", "script": LEG},
     {"id": "constrained_plate", "name": "Constraint-sketched plate", "script": CONSTRAINED_PLATE},
+    {"id": "turntable", "name": "Turntable (assembly with joints)", "script": TURNTABLE},
 ]
