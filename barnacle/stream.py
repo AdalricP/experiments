@@ -36,8 +36,8 @@ def main():
             wait = float(r["t_s"]) - (time.monotonic() - start)
             if wait > 0:
                 time.sleep(wait)
-            us = " ".join(r[f"s{i}_us"] for i in range(1, 7))
-            send(port, f"P {us} {r['e_mm']}")
+            steps = " ".join(r[f"s{i}"] for i in range(1, 7))
+            send(port, f"P {steps} {r['e_mm']}")
         send(port, "T 0")
 
 

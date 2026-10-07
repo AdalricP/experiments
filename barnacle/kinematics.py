@@ -188,8 +188,11 @@ def contact_error(g, R, t, q, dalpha):
     return worst
 
 
-def pulses_us(g, alpha, us_per_deg=2000 / 180, centre=1500.0):
-    """Servo command pulse widths for a servo whose angle grows counter-clockwise
-    seen from the horn as the pulse lengthens. Servos whose shaft points along -axis count the
-    other way. Calibration (see README) overrides centre/scale per servo."""
-    return centre - g.sign * np.degrees(alpha) * us_per_deg
+STEPS_PER_REV = 4096   # STS3215 12-bit magnetic encoder on the output shaft
+
+
+def servo_steps(g, alpha, centre=2048):
+    """STS3215 goal positions (0..4095). `centre` is the reading with the arm
+    level; after assembly, write each servo's offset register so that holds.
+    Servos whose shaft points along -axis count the other way."""
+    return np.rint(centre - g.sign * alpha * STEPS_PER_REV / (2 * np.pi)).astype(int)

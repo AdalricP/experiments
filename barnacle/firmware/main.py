@@ -1,76 +1,164 @@
 # Barnacle controller - MicroPython on a Raspberry Pi Pico (RP2040).
 #
+# All eight servos are Feetech STS3215 bus servos on one half-duplex TTL bus,
+# IDs 1-6 = hexapod legs, 7 = extruder (wheel mode), 8 = probe arm.
+#
 # The host does the kinematics (kinematics.py) and streams one line per pose:
-#     P <us1> <us2> <us3> <us4> <us5> <us6> <e_mm>
-# and the Pico answers "ok" once that pose has been applied. Other commands:
+#     P <s1> <s2> <s3> <s4> <s5> <s6> <e_mm>     goal positions in encoder counts
+# and the Pico answers "ok" once the goals are sent. Other commands:
 #     T <celsius>     set hotend target (0 = off)
-#     PROBE           deploy probe (servo 8), report "probe 1/0", stow it
-#     DEPLOY / STOW   move the probe without reading it
-#     LIMP            stop sending servo pulses
+#     CHECK           read legs 1-6 back, report worst |goal - actual| in counts
+#     PROBE           lower the probe arm until it feels the surface, report the
+#                     encoder count where it stopped ("probe <count>"), lift it
+#     LIMP            torque off on every servo
 #     ?               status line
 #
-# Pin map (GPIO numbers):
-#   0-5  hexapod servos 1-6       6  probe servo (servo 8)
-#   7    probe micro switch (to GND, internal pull-up)
-#   8/9  DRV8871 IN1/IN2 for the gutted extruder servo's motor (servo 7)
-#   10   hotend heater MOSFET gate  26  thermistor (100k NTC, 4.7k pull-up to 3V3)
-#   20/21 I2C0 SDA/SCL -> AS5600 magnetic encoder on the extruder drive shaft
+# Wiring (GPIO numbers):
+#   0/1  UART0 TX/RX -> Waveshare Bus Servo Adapter (A) in UART mode, or a
+#        74HC126 half-duplex buffer (TX and RX joined onto the servo data line)
+#   10   hotend heater MOSFET gate    26  thermistor (100k NTC, 4.7k pull-up to 3V3)
+#   Servo power: 7.4 V (2S) straight to the bus; Pico GND joined to it.
 #
-# Not yet run on hardware: treat it as a starting point and check pins, servo
-# pulse limits and the heater safety limits before powering the hotend.
+# Not yet run on hardware: check the register map against your servos' firmware
+# and the heater limits before powering the hotend. Give each servo its ID once
+# with Feetech's FD tool (or `set_id` below) before chaining them.
 
 import math
+import select
 import sys
 import time
 
-import select
-from machine import ADC, I2C, PWM, Pin
+from machine import ADC, PWM, UART, Pin
 
-SERVO_HZ = 250             # most digital HV servos take 200-333 Hz; drop to 50 for analogue
-PULSE_MIN, PULSE_MAX = 600, 2400
-PROBE_UP, PROBE_DOWN = 900, 2050
+# ---- STS register map (SMS/STS series) -------------------------------------
+ID_REG, MODE, TORQUE_ENABLE, ACC, GOAL_POS, GOAL_SPEED = 5, 33, 40, 41, 42, 46
+TORQUE_LIMIT, LOCK, PRESENT_POS, PRESENT_LOAD = 48, 55, 56, 60
+READ, WRITE, SYNC_WRITE = 0x02, 0x03, 0x83
 
-MM_PER_COUNT = (11.0 * math.pi) / 4096   # MK8 effective diameter ~11 mm, 12-bit AS5600
-E_KP, E_KI = 900.0, 4000.0               # duty per mm of extrusion error
+LEGS = (1, 2, 3, 4, 5, 6)
+EXTRUDER, PROBE = 7, 8
+LEG_SPEED = 3400        # counts/s cap; the host paces the moves
+PROBE_UP, PROBE_DOWN = 2048, 2048 + 900
+PROBE_LOAD = 120        # 0..1000 (0.1 % of max torque) that counts as contact
+
+MM_PER_COUNT = (11.0 * math.pi) / 4096   # MK8 effective diameter ~11 mm, direct on the horn
+E_KP, E_KI, E_MAX = 4000.0, 8000.0, 2400  # wheel speed per mm of error, cap
 
 T_MAX = 260.0
 HEAT_KP, HEAT_KI, HEAT_KD = 0.05, 0.002, 0.25
 
+uart = UART(0, baudrate=1_000_000, tx=Pin(0), rx=Pin(1), timeout=3)
 
-class Servo:
-    def __init__(self, pin):
-        self.pwm = PWM(Pin(pin))
-        self.pwm.freq(SERVO_HZ)
-        self.pwm.duty_ns(0)
 
-    def us(self, pulse):
-        pulse = min(max(pulse, PULSE_MIN), PULSE_MAX)
-        self.pwm.duty_ns(int(pulse * 1000))   # RP2040 PWM resolves well under 0.1 us here
+# ---- bus protocol -----------------------------------------------------------
+def packet(sid, instr, params=b""):
+    body = bytes([sid, len(params) + 2, instr]) + bytes(params)
+    return b"\xff\xff" + body + bytes([(~sum(body)) & 0xFF])
 
-    def limp(self):
-        self.pwm.duty_ns(0)
+
+def transact(pkt, reply_len):
+    """Send a packet; return the reply's parameter bytes (or None).
+    Half-duplex wiring often echoes what we sent, so skip it if present."""
+    while uart.any():
+        uart.read()
+    uart.write(pkt)
+    uart.flush()
+    if reply_len is None:
+        return None
+    want = len(pkt) + 6 + reply_len
+    buf = b""
+    end = time.ticks_add(time.ticks_ms(), 5)
+    while time.ticks_diff(end, time.ticks_ms()) > 0 and len(buf) < want:
+        chunk = uart.read()
+        if chunk:
+            buf += chunk
+    if buf.startswith(pkt):
+        buf = buf[len(pkt):]
+    i = buf.find(b"\xff\xff")
+    if i < 0 or len(buf) < i + 6 + reply_len:
+        return None
+    r = buf[i:i + 6 + reply_len]
+    if (~sum(r[2:-1])) & 0xFF != r[-1]:
+        return None
+    return r[5:5 + reply_len]
+
+
+def write(sid, addr, data):
+    transact(packet(sid, WRITE, bytes([addr]) + bytes(data)), None)
+
+
+def read_u16(sid, addr):
+    d = transact(packet(sid, READ, bytes([addr, 2])), 2)
+    return None if d is None else d[0] | (d[1] << 8)
+
+
+def sync_write(addr, rows):
+    """rows: list of (id, bytes) all the same length."""
+    n = len(rows[0][1])
+    params = bytes([addr, n])
+    for sid, data in rows:
+        params += bytes([sid]) + bytes(data)
+    transact(packet(0xFE, SYNC_WRITE, params), None)
+
+
+def u16(v):
+    return bytes([v & 0xFF, (v >> 8) & 0xFF])
+
+
+def signed15(v):
+    """STS encodes negatives with bit 15 as the sign."""
+    return u16((-v) | 0x8000) if v < 0 else u16(v)
+
+
+def eeprom(sid, addr, value):
+    write(sid, LOCK, [0])
+    write(sid, addr, [value])
+    write(sid, LOCK, [1])
+
+
+def set_id(old, new):
+    eeprom(old, ID_REG, new)
+
+
+# ---- servos -----------------------------------------------------------------
+goals = {}
+
+
+def legs_to(counts):
+    rows = []
+    for sid, c in zip(LEGS, counts):
+        c = min(max(int(c), 0), 4095)
+        goals[sid] = c
+        rows.append((sid, bytes([0]) + u16(c) + u16(0) + u16(LEG_SPEED)))  # acc, pos, time, speed
+    sync_write(ACC, rows)
+
+
+def worst_leg_error():
+    worst = 0
+    for sid in LEGS:
+        p = read_u16(sid, PRESENT_POS)
+        if p is None:
+            return -1
+        worst = max(worst, abs(p - goals.get(sid, p)))
+    return worst
 
 
 class Extruder:
-    """Servo 7 with its control board removed: motor + gearbox + our encoder."""
+    """Servo 7 in wheel mode. Its own encoder is unwrapped into a filament length
+    and a PI loop sets the wheel speed to follow the host's e_mm."""
 
     def __init__(self):
-        self.i2c = I2C(0, sda=Pin(20), scl=Pin(21), freq=400_000)
-        self.in1, self.in2 = PWM(Pin(8)), PWM(Pin(9))
-        for p in (self.in1, self.in2):
-            p.freq(20_000)
-            p.duty_u16(0)
-        self.last = self.raw()
-        self.pos = 0.0        # mm of filament pushed since boot
+        eeprom(EXTRUDER, MODE, 1)
+        write(EXTRUDER, TORQUE_ENABLE, [1])
+        self.last = read_u16(EXTRUDER, PRESENT_POS) or 0
+        self.pos = 0.0
         self.target = 0.0
         self.integral = 0.0
 
-    def raw(self):
-        b = self.i2c.readfrom_mem(0x36, 0x0C, 2)
-        return ((b[0] << 8) | b[1]) & 0x0FFF
-
     def update(self, dt):
-        r = self.raw()
+        r = read_u16(EXTRUDER, PRESENT_POS)
+        if r is None:
+            return
         d = r - self.last
         if d > 2048:
             d -= 4096
@@ -79,10 +167,25 @@ class Extruder:
         self.last = r
         self.pos += d * MM_PER_COUNT
         err = self.target - self.pos
-        self.integral = min(max(self.integral + err * dt, -5), 5)
-        duty = int(min(max(E_KP * err + E_KI * self.integral, -1), 1) * 65535)
-        self.in1.duty_u16(duty if duty > 0 else 0)
-        self.in2.duty_u16(-duty if duty < 0 else 0)
+        self.integral = min(max(self.integral + err * dt, -0.2), 0.2)
+        speed = int(min(max(E_KP * err + E_KI * self.integral, -E_MAX), E_MAX))
+        write(EXTRUDER, GOAL_SPEED, signed15(speed))
+
+
+def probe():
+    """Sweep the probe arm down gently; the servo's load reading is the switch."""
+    write(PROBE, TORQUE_LIMIT, u16(300))           # 30 % torque: it can't hurt anything
+    hit = None
+    for c in range(PROBE_UP, PROBE_DOWN, 4):
+        write(PROBE, ACC, bytes([0]) + u16(c) + u16(0) + u16(800))
+        time.sleep_ms(6)
+        load = read_u16(PROBE, PRESENT_LOAD)
+        if load is not None and (load & 0x3FF) > PROBE_LOAD:
+            hit = read_u16(PROBE, PRESENT_POS)
+            break
+    write(PROBE, ACC, bytes([0]) + u16(PROBE_UP) + u16(0) + u16(1500))
+    write(PROBE, TORQUE_LIMIT, u16(1000))
+    return hit
 
 
 class Hotend:
@@ -117,21 +220,13 @@ class Hotend:
         return t
 
 
-servos = [Servo(p) for p in range(6)]
-probe_servo = Servo(6)
-probe_switch = Pin(7, Pin.IN, Pin.PULL_UP)
+# ---- main loop --------------------------------------------------------------
+for sid in LEGS + (PROBE,):
+    write(sid, TORQUE_ENABLE, [1])
 extruder = Extruder()
 hotend = Hotend()
 poll = select.poll()
 poll.register(sys.stdin, select.POLLIN)
-
-
-def background(ms):
-    """Keep the extruder and heater loops running while we wait."""
-    end = time.ticks_add(time.ticks_ms(), ms)
-    while time.ticks_diff(end, time.ticks_ms()) > 0:
-        extruder.update(0.002)
-        time.sleep_ms(2)
 
 
 def handle(line):
@@ -140,28 +235,19 @@ def handle(line):
         return
     cmd = parts[0].upper()
     if cmd == "P" and len(parts) == 8:
-        for s, us in zip(servos, parts[1:7]):
-            s.us(float(us))
+        legs_to([int(float(x)) for x in parts[1:7]])
         extruder.target = float(parts[7])
         print("ok")
     elif cmd == "T":
         hotend.target = min(float(parts[1]), T_MAX - 15)
         print("ok")
+    elif cmd == "CHECK":
+        print("err_counts", worst_leg_error())
     elif cmd == "PROBE":
-        probe_servo.us(PROBE_DOWN)
-        background(250)
-        print("probe", 0 if probe_switch.value() else 1)
-        probe_servo.us(PROBE_UP)
-        background(200)
-    elif cmd == "DEPLOY":
-        probe_servo.us(PROBE_DOWN)
-        print("ok")
-    elif cmd == "STOW":
-        probe_servo.us(PROBE_UP)
-        print("ok")
+        print("probe", probe())
     elif cmd == "LIMP":
-        for s in servos + [probe_servo]:
-            s.limp()
+        for sid in LEGS + (EXTRUDER, PROBE):
+            write(sid, TORQUE_ENABLE, [0])
         print("ok")
     elif cmd == "?":
         print("temp %.1f target %.0f e %.3f/%.3f" % (hotend.temp(), hotend.target, extruder.pos, extruder.target))
@@ -170,18 +256,19 @@ def handle(line):
 
 
 buf = ""
-last_heat = time.ticks_ms()
+last_heat = last_e = time.ticks_ms()
 while True:
-    extruder.update(0.002)
     now = time.ticks_ms()
+    if time.ticks_diff(now, last_e) >= 5:
+        extruder.update(time.ticks_diff(now, last_e) / 1000)
+        last_e = now
     if time.ticks_diff(now, last_heat) >= 100:
         hotend.update(time.ticks_diff(now, last_heat) / 1000)
         last_heat = now
-    if poll.poll(0):
+    while poll.poll(0):
         ch = sys.stdin.read(1)
         if ch in "\r\n":
             handle(buf.strip())
             buf = ""
         else:
             buf += ch
-    time.sleep_ms(2)

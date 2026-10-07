@@ -17,10 +17,9 @@ from manifold3d import Manifold
 from kinematics import Geometry
 
 # ---- hardware the parts are built around (measure yours, edit here) --------
-SERVO_L, SERVO_W, SERVO_H = 40.5, 20.2, 38.0  # standard-size case
-SERVO_SHAFT_FROM_END = 10.1   # shaft centre to the near end of the case (along L)
-FLANGE_FROM_TOP = 10.5        # case top face to the flange face nearest the horn
-FLANGE_HOLE_L, FLANGE_HOLE_W = 49.5, 10.0
+# Feetech STS3215 (7.4 V) serial bus servo: 45.2 x 24.7 x 35 mm aluminium case.
+SERVO_L, SERVO_W, SERVO_H = 45.2, 24.7, 35.0  # length, width, height along the shaft
+SERVO_SHAFT_FROM_END = 11.5   # shaft centre to the near end of the case (along L) - measure
 BALL_PLANE = 16.0             # case top face to the ball-centre plane (horn + arm + cup)
 EXTRUSION = 20.0              # 2020 aluminium extrusion
 CLEAR = 0.3                   # fit clearance for printed pockets
@@ -46,29 +45,30 @@ def place(m, origin, ex, ey, ez):
 
 
 # ---- servo pods: one per servo pair, three per machine ----------------------
-def servo_cradle():
+def servo_cradle(floor=FLOOR_Z):
     """Cradle in servo-local frame: x = arm swing direction (in plan),
     y = shaft axis pointing at the horn, z = up. Origin = shaft axis in the
-    ball-link plane, i.e. exactly the kinematic base point b_i."""
-    face = -BALL_PLANE - FLANGE_FROM_TOP          # flange seats on this y
-    t = 7.0
-    zc = SERVO_SHAFT_FROM_END - SERVO_L / 2        # case centre height
-    w2 = SERVO_W / 2 + 8
-    plate = box(-w2, w2, face - t, face, FLOOR_Z, zc + SERVO_L / 2 + 10)
-    window = box(-SERVO_W / 2 - CLEAR, SERVO_W / 2 + CLEAR, face - t - 1, face + 1,
-                 zc - SERVO_L / 2 - CLEAR, zc + SERVO_L / 2 + CLEAR)
-    plate = plate - window
-    for dz in (-FLANGE_HOLE_L / 2, FLANGE_HOLE_L / 2):
-        for dx in (-FLANGE_HOLE_W / 2, FLANGE_HOLE_W / 2):
-            hole = Manifold.cylinder(t + 2, M4 / 2 - 0.4, circular_segments=24)  # self-tap M4
-            plate = plate - hole.rotate([90, 0, 0]).translate([dx, face + 1, zc + dz])
-    # two side walls running back along the case: stiffness + keeps it square
-    back = face - t - SERVO_H + FLANGE_FROM_TOP + 2
-    for sx in (-1, 1):
-        x0 = sx * (SERVO_W / 2 + CLEAR)
-        wall = box(min(x0, x0 + sx * 5), max(x0, x0 + sx * 5), back, face - t, FLOOR_Z, zc + 6)
-        plate = plate + wall
-    return plate
+    ball-centre plane, i.e. exactly the kinematic base point b_i.
+
+    The STS3215 has no flange, so the case slides into a close-fitting sleeve
+    from the horn side (before the horn goes on) and is locked by four M3 grub
+    screws bearing on its aluminium sides. A lip at the back stops it."""
+    t = 5.0
+    top_y = -BALL_PLANE                       # case top face (horn side)
+    back_y = top_y - SERVO_H                  # case back face
+    zc = SERVO_SHAFT_FROM_END - SERVO_L / 2   # case centre height
+    hx, hz = SERVO_W / 2 + CLEAR, SERVO_L / 2 + CLEAR
+    sleeve = box(-hx - t, hx + t, back_y - 3, top_y - 2, floor, zc + hz + t)
+    sleeve = sleeve - box(-hx, hx, back_y, top_y + 1, zc - hz, zc + hz)
+    # back lip leaves a window for the cable and the two bus connectors
+    sleeve = sleeve - box(-hx + 3, hx - 3, back_y - 4, back_y + 1, zc - hz + 3, zc + hz - 3)
+    ymid = (back_y + top_y) / 2
+    for dy in (-8, 8):
+        grub = Manifold.cylinder(t + 2, 2.5 / 2, circular_segments=20)    # tap M3
+        sleeve = sleeve - grub.translate([0, ymid + dy, zc + hz - 1])
+        side = grub.rotate([0, 90, 0])
+        sleeve = sleeve - side.translate([hx - 1, ymid + dy, zc])
+    return sleeve
 
 
 def servo_frame(g, i):
@@ -227,8 +227,9 @@ def elbow():
 
 # ---- servo 8: surface probe -------------------------------------------------
 def probe_arm():
-    """Bolts to a servo disc horn. Carries a KW10-style micro switch (28 x 10 x 16,
-    holes 22 mm apart) on its tip so the probe can swing down beside the nozzle."""
+    """Bolts to servo 8's disc horn and carries a stylus beside the nozzle. Contact
+    is sensed from the servo's own load reading; the pad also takes an optional
+    KW10 micro switch (holes 22 mm apart) if you want a hard trigger."""
     L = 45
     arm = box(-6, 6, 0, L, 0, 5) + cyl(10, 0, 5)
     for r in (-7, 7):  # disc-horn screws
@@ -240,32 +241,36 @@ def probe_arm():
     return arm + pad
 
 
-# ---- servo 7: closed-loop extruder ------------------------------------------
+# ---- servo 7: extruder -------------------------------------------------------
 def extruder_body():
-    """The servo's control board is removed; its motor+gearbox drive a 5 mm shaft
-    through `coupler`. Shaft runs in two 625 bearings, carries an MK8 drive gear,
-    and has a diametric magnet on its far end read by an AS5600."""
-    t = 8
-    body = box(-30, 30, -18, 18, 0, t)                    # servo flange plate
-    body = body - box(-SERVO_L / 2 - CLEAR, SERVO_L / 2 + CLEAR,
-                      -SERVO_W / 2 - CLEAR, SERVO_W / 2 + CLEAR, -1, t + 1).translate([SERVO_L / 2 - SERVO_SHAFT_FROM_END, 0, 0])
-    for dx in (-FLANGE_HOLE_L / 2, FLANGE_HOLE_L / 2):
-        for dy in (-FLANGE_HOLE_W / 2, FLANGE_HOLE_W / 2):
-            body = body - cyl(M4 / 2 - 0.4, -1, t + 1, dx + SERVO_L / 2 - SERVO_SHAFT_FROM_END, dy)
+    """Servo 7 runs in its continuous (wheel) mode and drives a 5 mm shaft through
+    `coupler`; its own 12-bit encoder measures how much filament went in, so no
+    extra sensor is needed. The shaft runs in two 625 bearings and carries an MK8
+    drive gear; a 623 idler on a spring-loaded arm presses the filament onto it.
+    Built shaft-up, origin on the shaft axis at the horn plane."""
+    hx = SERVO_W / 2 + CLEAR + 5
+    floor = SERVO_SHAFT_FROM_END - SERVO_L - CLEAR - 5
+    sleeve = servo_cradle(floor).rotate([90, 0, 0])
     # bearing tower over the shaft: 625 = 5 x 16 x 5
-    tower = box(-14, 14, -14, 14, t, t + 46)
-    tower = tower - cyl(2.5 + 0.6, t - 1, t + 47)
-    tower = tower - cyl(8 + 0.1, t + 18, t + 23.2) - cyl(8 + 0.1, t + 40.8, t + 47)
-    tower = tower - box(-15, 15, -8, 8, t + 24, t + 39)   # gear window
-    tower = tower - Manifold.cylinder(40, 1.0, circular_segments=16).rotate([90, 0, 0]).translate([5.5, 20, t + 31.5])  # 1.75 filament path
-    tower = tower - Manifold.cylinder(30, 2.1, circular_segments=16).rotate([90, 0, 0]).translate([5.5, 27, t + 31.5])  # PTFE / fitting
+    z0 = 6
+    tower = box(-14, 14, -14, 14, z0, z0 + 46)
+    tower = tower - cyl(2.5 + 0.6, z0 - 1, z0 + 47)
+    tower = tower - cyl(8 + 0.1, z0 - 1, z0 + 5.2) - cyl(8 + 0.1, z0 + 40.8, z0 + 47)
+    tower = tower - box(-15, 15, -8, 8, z0 + 24, z0 + 39)   # gear window
+    tower = tower - Manifold.cylinder(40, 1.0, circular_segments=16).rotate([90, 0, 0]).translate([5.5, 20, z0 + 31.5])  # 1.75 filament path
+    tower = tower - Manifold.cylinder(30, 2.1, circular_segments=16).rotate([90, 0, 0]).translate([5.5, 27, z0 + 31.5])  # PTFE / fitting
     # idler arm pivot boss (623 bearing on an M3 bolt, spring-loaded)
-    tower = tower + box(10, 20, -14, 14, t, t + 46) - cyl(M3 / 2, t - 1, t + 47, x=15, y=-9)
-    return body + tower
+    tower = tower + box(10, 20, -14, 14, z0, z0 + 46) - cyl(M3 / 2, z0 - 1, z0 + 47, x=15, y=-9)
+    # two pillars carry the tower over the horn and coupler
+    pillars = Manifold()
+    for sx in (-1, 1):
+        pillars = pillars + box(sx * hx - 2.5, sx * hx + 2.5, -12, 12, -BALL_PLANE - 3, z0 + 1)
+    return sleeve + pillars + tower
 
 
 def coupler():
-    """Disc-horn -> 5 mm shaft. Two M3 set screws on the shaft flat."""
+    """Servo disc horn -> 5 mm shaft. Two M3 set screws on the shaft flat.
+    Horn screw holes assume 4 x M2.5 on a 14 mm circle: check your horn."""
     c = cyl(10, 0, 4) + cyl(6, 4, 16)
     c = c - cyl(2.5 + 0.15, 3, 17) - cyl(4, -1, 2.5)
     for r in (-7, 7):

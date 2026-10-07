@@ -8,7 +8,7 @@
    (which takes the gear backlash out), and do the magnetic joints stay seated?
 4. Demo job: Braille "HOT" printed onto a domed knob, every dot standing
    normal to the surface, checked pose by pose and written out as servo
-   pulses in demo_braille.csv.
+   goal positions (encoder counts) in demo_braille.csv.
 """
 
 from pathlib import Path
@@ -20,13 +20,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from kinematics import (Geometry, Unreachable, contact_error, home, ik, leg_forces,
-                        pose_for_contact, pulses_us)
+                        pose_for_contact, servo_steps)
 
 HERE = Path(__file__).parent
 
 # -- assumptions you should check against your parts --------------------------
-SERVO_STALL_NM = 2.0          # ~20 kg*cm at 7.4 V, typical HV standard servo
-SERVO_RESOLUTION_DEG = 0.1    # digital servo deadband ~1 us at ~11 us/deg
+SERVO_STALL_NM = 1.9          # STS3215 7.4 V: 19.5 kg*cm peak stall
+SERVO_RESOLUTION_DEG = 360 / 4096  # one count of its 12-bit output-shaft encoder
 BACKLASH_DEG = 0.5            # cheap metal-gear servo, measured at the horn
 ARM_SPRING_N = 8.0            # preload spring on each servo arm tip, pulling down
 MAGNET_HOLD_N = 8.0           # pull-off force of a 10 mm ball on a 12 x 4 mm N52 cup
@@ -133,7 +133,7 @@ def main():
     e_res = contact_error(g, R0, t0, q_top, np.radians(SERVO_RESOLUTION_DEG))
     e_bl = contact_error(g, R0, t0, q_top, np.radians(BACKLASH_DEG))
     print(f"[accuracy] worst-case spot error at home: {e_res:.3f} mm from "
-          f"{SERVO_RESOLUTION_DEG} deg servo resolution; {e_bl:.2f} mm if "
+          f"{SERVO_RESOLUTION_DEG:.3f} deg servo resolution; {e_bl:.2f} mm if "
           f"{BACKLASH_DEG} deg backlash were left in")
 
     # 3+4. demo job: raise the hotend so its tip sits at the top of the knob
@@ -164,7 +164,7 @@ def main():
                 t_job += 0.04
             else:            # hop to the next dot: no extrusion, give the servos time
                 t_job += 0.3
-        rows.append([round(t_job, 3), *pulses_us(g, alpha).round(2), round(e_cum, 4)])
+        rows.append([round(t_job, 3), *servo_steps(g, alpha), round(e_cum, 4)])
     alphas = np.array(alphas)
     print(f"\n[demo] Braille 'HOT' onto a domed knob (sphere r {radius:.0f} mm), every dot normal "
           f"to the surface: {len(rows)} poses, {skipped} unreachable")
@@ -177,8 +177,9 @@ def main():
           f"magnets hold ~{MAGNET_HOLD_N:.0f} N)")
     print(f"          peak servo torque {max(tmax):.2f} N*m = {100 * max(tmax) / SERVO_STALL_NM:.0f}% of stall")
 
-    header = "t_s,s1_us,s2_us,s3_us,s4_us,s5_us,s6_us,e_mm"
-    np.savetxt(HERE / "demo_braille.csv", np.array(rows), delimiter=",", header=header, comments="", fmt="%.4f")
+    header = "t_s,s1,s2,s3,s4,s5,s6,e_mm"
+    np.savetxt(HERE / "demo_braille.csv", np.array(rows), delimiter=",", header=header, comments="",
+               fmt=["%.3f"] + ["%d"] * 6 + ["%.4f"])
 
     # figure
     fig = plt.figure(figsize=(14, 4.6), dpi=110)
