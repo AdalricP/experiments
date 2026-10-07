@@ -2,6 +2,12 @@
 
 ## Recent
 
+### 2026-10-07 — Barnacle: a servo hexapod that prints onto things
+
+This design turns eight spare 7.4 V hobby servos into a fixed-nozzle printer that prints onto existing curved objects. The specific job is tactile Braille labels on knobs, keycaps and caps. Six servos form a Stewart platform that tilts the object so each dot stands normal to the surface, one gutted servo becomes a closed-loop encoder extruder, and one deploys a surface probe. The kinematics model drove the geometry: steep legs keep the spot error near 0.04 mm for 0.1° of servo error, and per-arm springs keep the gears preloaded so backlash stays out (a single central spring failed this check). The cost is a small ±8.5 mm, ±18° workspace, which fits a "HOT" Braille label on a domed knob (all 720 poses are reachable). The parts and firmware are generated but not built yet, so the next step is printing it and measuring real servo deadband.
+
+![Barnacle assembly](barnacle/assets/assembly.png)
+
 ### 2026-09-13 — Kadhai: floating soft cells
 
 This experiment uses Algovivo to float twelve soft 2D cells without gravity, grow their bodies, and pass mutated lengths, widths, and lobes from nutrient-gathering survivors to the next generation. The running browser capture shows mature cells with distinct outlines and 44 absorbed nutrients, while seeded solver checks completed three selection rounds without non-finite positions. Next, compare evolving populations with frozen-genome controls under identical nutrient fields to see whether shape selection helps rather than just changing appearances.
